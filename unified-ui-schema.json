@@ -1,0 +1,89 @@
+{
+  "page_meta": {
+    "source_type": "url",
+    "page_url": "https://example.com",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "platform": "mobile"
+  },
+  "elements": [
+    {
+      "id": "e1",
+      "type": "button",
+      "text": "立即购买",
+      "bbox": [100, 200, 120, 44],
+      "confidence": 0.92,
+      "source": ["ocr", "vision", "dom"],
+      "dom_path": "body>div#product-page>button#buy",
+      "css": {
+        "fontSize": "16px",
+        "color": "#ff5a1f",
+        "background": "#fff"
+      },
+      "aria": {
+        "role": "button",
+        "label": "buy"
+      },
+      "contrast_ratio": 6.8,
+      "is_clickable": true
+    },
+    {
+      "id": "e2",
+      "type": "heading",
+      "text": "产品介绍",
+      "bbox": [50, 100, 200, 30],
+      "confidence": 0.95,
+      "source": ["dom"],
+      "dom_path": "body>div#product-page>h1#title",
+      "css": {
+        "fontSize": "24px",
+        "color": "#333333",
+        "background": "#ffffff"
+      },
+      "aria": {
+        "role": "heading",
+        "label": "product title"
+      },
+      "contrast_ratio": 7.0,
+      "is_clickable": false
+    },
+    {
+      "id": "e3",
+      "type": "input",
+      "text": "请输入邮箱",
+      "bbox": [50, 300, 300, 40],
+      "confidence": 0.88,
+      "source": ["dom"],
+      "dom_path": "body>div#product-page>form>input#email",
+      "css": {
+        "fontSize": "16px",
+        "color": "#666666",
+        "background": "#ffffff"
+      },
+      "aria": {
+        "role": "textbox",
+        "label": "email"
+      },
+      "contrast_ratio": 4.5,
+      "is_clickable": true
+    }
+  ],
+  "performance": {
+    "lighthouse_score": 55,
+    "first_contentful_paint": 3.2
+  },
+  "axe_issues": [
+    {
+      "id": "color-contrast",
+      "description": "Elements must have sufficient color contrast",
+      "nodes": [
+        {
+          "target": ["body>div#product-page>button#buy"],
+          "html": "<button id=\"buy\">立即购买</button>"
+        }
+      ]
+    }
+  ]
+}

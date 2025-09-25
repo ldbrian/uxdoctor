@@ -1,0 +1,54 @@
+<!-- ... existing code ... -->
+<header class="report-header">
+    <div class="container">
+        <h1>UX体验体检报告</h1>
+        <button class="btn-primary" id="back-to-home">返回首页</button>
+    </div>
+</header>
+
+<section class="report-section">
+    <div class="container">
+        <div class="report-content">
+            <!-- 报告内容将通过JavaScript动态加载 -->
+        </div>
+    </div>
+</section>
+
+<!-- 新增建议部分遮罩样式 -->
+<style>
+    .recommendations-mask {
+        position: relative;
+        overflow: hidden;
+        margin-top: 30px;
+    }
+
+    .recommendations-mask::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(5px);
+        z-index: 1;
+    }
+
+    .recommendations-mask .unlock-btn {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2;
+        padding: 10px 20px;
+        background-color: #4361ee;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+</style>
+
+<script src="/js/report.js"></script>
+</body>
+</html>

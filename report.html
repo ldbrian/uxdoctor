@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UX体验体检报告 - UXDoctor</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- 顶部标题区域 -->
+    <header class="report-header">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <button class="btn-primary" id="back-to-home">返回首页</button>
+                <h1 style="flex: 1; text-align: center;">UX体验体检报告</h1>
+                <div style="width: 60px;"></div> <!-- 占位元素，保持标题居中 -->
+            </div>
+            <div class="report-date" id="report-date" style="text-align: center; margin-top: 10px; font-size: 0.9rem; opacity: 0.9;"></div>
+        </div>
+    </header>
+
+    <!-- 报告内容区域 -->
+    <section class="report-section">
+        <div class="container">
+            <div class="report-content">
+                <!-- 报告内容将通过JavaScript动态加载 -->
+            </div>
+        </div>
+    </section>
+
+    <script src="/js/report.js"></script>
+</body>
+</html>

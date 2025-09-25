@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UXDoctor - API密钥配置</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .config-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .config-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-group label {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-group input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #4361ee;
+            box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            background: #4361ee;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #3a56d4;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .model-selector {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .model-option {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .model-option:hover {
+            border-color: #4361ee;
+        }
+        
+        .model-option.selected {
+            border-color: #4361ee;
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+        
+        .model-option h3 {
+            margin: 0 0 10px 0;
+        }
+        
+        .model-option p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .notification {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .notification.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .notification.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="config-container">
+        <h1>API密钥配置</h1>
+        <p>请配置您的AI服务API密钥以启用真实AI分析功能</p>
+        
+        <div id="notification"></div>
+        
+        <form id="api-config-form" class="config-form">
+            <div class="form-group">
+                <label for="openai-key">OpenAI API密钥</label>
+                <input type="password" id="openai-key" placeholder="sk-... (可选)">
+                <small>获取地址: <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI API密钥</a></small>
+            </div>
+            
+            <div class="form-group">
+                <label for="deepseek-key">DeepSeek API密钥</label>
+                <input type="password" id="deepseek-key" placeholder="sk-... (可选)">
+                <small>获取地址: <a href="https://platform.deepseek.com/" target="_blank">DeepSeek API密钥</a></small>
+            </div>
+            
+            <div class="form-group">
+                <label>选择主用AI模型</label>
+                <div class="model-selector">
+                    <div class="model-option selected" data-model="openai">
+                        <h3>OpenAI</h3>
+                        <p>GPT-3.5 Turbo模型</p>
+                    </div>
+                    <div class="model-option" data-model="deepseek">
+                        <h3>DeepSeek</h3>
+                        <p>DeepSeek Chat模型</p>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn">保存配置</button>
+            <button type="button" id="test-config" class="btn btn-secondary">测试配置</button>
+        </form>
+    </div>
+
+    <script>
+        // 页面加载时填充已保存的配置
+        document.addEventListener('DOMContentLoaded', function() {
+            // 从localStorage加载配置
+            const openaiKey = localStorage.getItem('openai_api_key');
+            const deepseekKey = localStorage.getItem('deepseek_api_key');
+            const primaryModel = localStorage.getItem('primary_ai') || 'openai';
+            
+            if (openaiKey) {
+                document.getElementById('openai-key').value = openaiKey;
+            }
+            
+            if (deepseekKey) {
+                document.getElementById('deepseek-key').value = deepseekKey;
+            }
+            
+            // 设置选中的模型
+            document.querySelectorAll('.model-option').forEach(option => {
+                option.classList.remove('selected');
+                if (option.dataset.model === primaryModel) {
+                    option.classList.add('selected');
+                }
+            });
+            
+            // 模型选择事件
+            document.querySelectorAll('.model-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.model-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                });
+            });
+            
+            // 表单提交事件
+            document.getElementById('api-config-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveConfig();
+            });
+            
+            // 测试配置事件
+            document.getElementById('test-config').addEventListener('click', testConfig);
+        });
+        
+        // 保存配置到localStorage
+        function saveConfig() {
+            const openaiKey = document.getElementById('openai-key').value;
+            const deepseekKey = document.getElementById('deepseek-key').value;
+            const primaryModel = document.querySelector('.model-option.selected').dataset.model;
+            
+            if (openaiKey) {
+                localStorage.setItem('openai_api_key', openaiKey);
+            } else {
+                localStorage.removeItem('openai_api_key');
+            }
+            
+            if (deepseekKey) {
+                localStorage.setItem('deepseek_api_key', deepseekKey);
+            } else {
+                localStorage.removeItem('deepseek_api_key');
+            }
+            
+            localStorage.setItem('primary_ai', primaryModel);
+            
+            showNotification('配置已保存！', 'success');
+        }
+        
+        // 测试配置
+        function testConfig() {
+            const openaiKey = document.getElementById('openai-key').value;
+            const deepseekKey = document.getElementById('deepseek-key').value;
+            const primaryModel = document.querySelector('.model-option.selected').dataset.model;
+            
+            if (!openaiKey && !deepseekKey) {
+                showNotification('请至少配置一个API密钥', 'error');
+                return;
+            }
+            
+            showNotification(`配置已设置。主用模型: ${primaryModel === 'openai' ? 'OpenAI' : 'DeepSeek'}`, 'success');
+        }
+        
+        // 显示通知
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = 'notification ' + type;
+            
+            // 3秒后自动隐藏通知
+            setTimeout(() => {
+                notification.className = '';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

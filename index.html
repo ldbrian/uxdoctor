@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UXDoctor - 用户体验体检工具</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="main-header">
+        <div class="container">
+            <h1>UXDoctor - 自动化UX体验体检工具</h1>
+            <p>快速发现App/网站的可用性问题，提供优化建议</p>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h2>让用户体验优化变得更简单</h2>
+                <p>只需输入网址或上传截图，UXDoctor 将在30秒内为您生成详细的用户体验报告，帮助您发现潜在问题并提供优化建议。</p>
+                <div class="hero-features">
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <h3>快速分析</h3>
+                        <p>30秒内生成完整体检报告</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔍</div>
+                        <h3>全面检测</h3>
+                        <p>涵盖导航、表单、视觉等7大维度</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">💡</div>
+                        <h3>专业建议</h3>
+                        <p>提供可操作的优化建议</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="upload-section">
+        <div class="container">
+            <div class="analysis-card">
+                <h2>开始体验分析</h2>
+                <p class="analysis-description">只需输入网址或上传截图，UXDoctor 将在30秒内为您生成详细的用户体验报告</p>
+                <form id="ux-analysis-form" onsubmit="return false;">
+                    <div class="form-group">
+                        <label for="url-input">网站地址</label>
+                        <input type="url" id="url-input" placeholder="https://example.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="screenshot-input">或上传截图</label>
+                        <div class="file-upload-area" id="upload-area">
+                            <input type="file" id="screenshot-input" accept="image/*" style="display: none;">
+                            <div class="file-upload-label">
+                                <span>点击选择文件或拖拽文件到此处</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="prototype-input">原型链接（可选）</label>
+                        <input type="url" id="prototype-input" placeholder="https://figma.com/file/...">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary btn-block" id="submit-btn">开始分析</button>
+                </form>
+            </div>
+            
+            <div class="history-section">
+                <h2>历史记录</h2>
+                <div id="history-list" class="history-list">
+                    <p class="no-history">暂无历史记录</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="how-it-works">
+        <div class="container">
+            <h2>如何使用 UXDoctor</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>输入信息</h3>
+                    <p>输入网站URL或上传产品截图</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>自动分析</h3>
+                    <p>系统将在30秒内完成全面体检</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>查看报告</h3>
+                    <p>获取详细的问题清单和优化建议</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>优化改进</h3>
+                    <p>根据建议优化产品，提升用户体验</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="pricing">
+        <div class="container">
+            <h2>价格方案</h2>
+            <div class="pricing-cards">
+                <div class="pricing-card">
+                    <h3>基础版</h3>
+                    <div class="price">免费</div>
+                    <ul>
+                        <li>基本体检报告</li>
+                        <li>问题发现</li>
+                        <li>基础优化建议</li>
+                    </ul>
+                    <button class="btn-secondary">立即使用</button>
+                </div>
+                <div class="pricing-card featured">
+                    <h3>专业版</h3>
+                    <div class="price">¥9.9<span>/次</span></div>
+                    <ul>
+                        <li>完整体检报告</li>
+                        <li>详细问题分析</li>
+                        <li>专业优化建议</li>
+                        <li>优先技术支持</li>
+                    </ul>
+                    <button class="btn-primary">解锁专业版</button>
+                </div>
+                <div class="pricing-card">
+                    <h3>企业版</h3>
+                    <div class="price">定制</div>
+                    <ul>
+                        <li>无限次体检</li>
+                        <li>人工深度分析</li>
+                        <li>定制优化方案</li>
+                        <li>专属客户经理</li>
+                    </ul>
+                    <button class="btn-secondary">联系我们</button>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="faq">
+        <div class="container">
+            <h2>常见问题</h2>
+            <div class="faq-items">
+                <div class="faq-item">
+                    <h3>UXDoctor 能检测哪些问题？</h3>
+                    <p>UXDoctor 能检测导航结构、表单设计、视觉清晰度、信息架构、性能表现、可访问性和安全性等7大维度的用户体验问题。</p>
+                </div>
+                <div class="faq-item">
+                    <h3>分析需要多长时间？</h3>
+                    <p>通常情况下，分析过程只需要20-30秒即可完成。</p>
+                </div>
+                <div class="faq-item">
+                    <h3>如何获取完整的优化建议？</h3>
+                    <p>免费版提供基础的优化建议，专业版（仅需9.9元）可解锁完整的优化建议和解决方案。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="loading-section hidden">
+        <div class="container">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <h2>正在分析中...</h2>
+                <p>AI正在深度扫描您的界面，预计需要10-30秒</p>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
