@@ -32,17 +32,38 @@
             color: #333;
         }
         
+        .input-group {
+            position: relative;
+        }
+        
         .form-group input {
             padding: 12px;
             border: 1px solid #ddd;
             border-radius: 5px;
             font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .form-group input[type="password"] {
+            padding-right: 40px;
         }
         
         .form-group input:focus {
             outline: none;
             border-color: #4361ee;
             box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+        }
+        
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
         }
         
         .btn {
@@ -133,13 +154,19 @@
         <form id="api-config-form" class="config-form">
             <div class="form-group">
                 <label for="openai-key">OpenAI API密钥</label>
-                <input type="password" id="openai-key" placeholder="sk-... (可选)">
+                <div class="input-group">
+                    <input type="password" id="openai-key" placeholder="sk-... (可选)">
+                    <button type="button" class="toggle-password" data-target="openai-key">👁️</button>
+                </div>
                 <small>获取地址: <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI API密钥</a></small>
             </div>
             
             <div class="form-group">
                 <label for="deepseek-key">DeepSeek API密钥</label>
-                <input type="password" id="deepseek-key" placeholder="sk-... (可选)">
+                <div class="input-group">
+                    <input type="password" id="deepseek-key" placeholder="sk-... (可选)">
+                    <button type="button" class="toggle-password" data-target="deepseek-key">👁️</button>
+                </div>
                 <small>获取地址: <a href="https://platform.deepseek.com/" target="_blank">DeepSeek API密钥</a></small>
             </div>
             
@@ -204,6 +231,21 @@
             
             // 测试配置事件
             document.getElementById('test-config').addEventListener('click', testConfig);
+            
+            // 密码显示切换事件
+            document.querySelectorAll('.toggle-password').forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    const input = document.getElementById(targetId);
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        this.textContent = '🔒';
+                    } else {
+                        input.type = 'password';
+                        this.textContent = '👁️';
+                    }
+                });
+            });
         });
         
         // 保存配置到localStorage

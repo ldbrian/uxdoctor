@@ -194,10 +194,19 @@ class AIAnalyzer {
             // 获取可访问性树
             const accessibilityTree = await page.accessibility.snapshot();
             
-            // 运行axe-core进行可访问性检查
-            const axeResults = await page.evaluate(() => {
+            // 注入 axe-core 脚本并运行可访问性检查
+            const axeResults = await page.evaluate(async () => {
+                // 动态加载 axe-core
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.8.0/axe.min.js';
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+                
                 return new Promise((resolve) => {
-                    axe.run(document, { runOnly: ['wcag2a', 'wcag2aa'] }, (err, results) => {
+                    window.axe.run(document, { runOnly: ['wcag2a', 'wcag2aa'] }, (err, results) => {
                         if (err) {
                             resolve({ error: err.message });
                         } else {
