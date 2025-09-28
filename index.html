@@ -66,8 +66,41 @@
                         <input type="url" id="prototype-input" placeholder="https://figma.com/file/...">
                     </div>
                     
+                    <div class="form-group">
+                        <label for="industry-input">行业领域（可选）</label>
+                        <input type="text" id="industry-input" placeholder="例如：电商、教育、金融等">
+                        <small class="form-help">提供行业信息有助于AI更准确地分析业务目标</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="business-goal-input">核心业务目标（可选）</label>
+                        <input type="text" id="business-goal-input" placeholder="例如：提升销售额、增加注册量等">
+                        <small class="form-help">明确业务目标有助于AI针对性分析</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="key-action-input">关键用户操作（可选）</label>
+                        <input type="text" id="key-action-input" placeholder="例如：完成购买、提交表单等">
+                        <small class="form-help">描述希望用户完成的关键操作</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="target-users-input">目标用户群体（可选）</label>
+                        <input type="text" id="target-users-input" placeholder="例如：年轻消费者、企业客户等">
+                        <small class="form-help">帮助AI更好地理解用户需求</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="additional-info">其他补充信息（可选）</label>
+                        <textarea id="additional-info" rows="3" placeholder="任何有助于分析的其他信息..."></textarea>
+                    </div>
+
                     <button type="submit" class="btn-primary btn-block" id="submit-btn">开始分析</button>
                 </form>
+                
+                <div class="form-notice">
+                    <p><strong>提示：</strong>填写以上业务相关信息可显著提高分析准确性。如果留空，AI将基于页面内容进行推测，但可能影响报告质量。</p>
+                </div>
             </div>
             
             <div class="history-section">

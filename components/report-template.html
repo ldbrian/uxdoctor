@@ -7,157 +7,118 @@
     <h2>综合评分 <span class="overall-score" id="overall-score">0</span></h2>
     <div class="score-container">
         <div class="score-box">
-            <div class="score-label">导航体验</div>
+            <div class="score-label">业务目标一致性</div>
             <div class="score-value navigation-score" id="navigation-score-value">0</div>
         </div>
         <div class="score-box">
-            <div class="score-label">视觉设计</div>
+            <div class="score-label">关键转化路径</div>
             <div class="score-value visual-score" id="visual-score-value">0</div>
         </div>
         <div class="score-box">
-            <div class="score-label">表单设计</div>
+            <div class="score-label">体验问题影响度</div>
             <div class="score-value form-score" id="form-score-value">0</div>
         </div>
-        <div class="score-box">
-            <div class="score-label">信息架构</div>
-            <div class="score-value information-score" id="information-score-value">0</div>
+    </div>
+</div>
+
+<div class="section">
+    <h2>业务目标一致性评估</h2>
+    <div class="subsection">
+        <p id="business-goal-assessment">暂无评估</p>
+    </div>
+</div>
+
+<div class="section">
+    <h2>关键转化路径体验分析</h2>
+    <div class="subsection">
+        <h3>路径摩擦点分析</h3>
+        <ul class="critical-issues-list" id="conversion-path-issues">
+            <li>无发现的问题</li>
+        </ul>
+    </div>
+</div>
+
+<div class="section">
+    <h2>体验问题与改进建议（按业务影响排序）</h2>
+    
+    <div class="dimension-section high-impact-section">
+        <h3>高影响问题 <span class="impact-badge high">高</span></h3>
+        <div class="subsection">
+            <ul class="issue-list high-impact-issues" id="high-impact-issues">
+                <li>无高影响问题</li>
+            </ul>
         </div>
-        <div class="score-box">
-            <div class="score-label">性能体验</div>
-            <div class="score-value performance-score" id="performance-score-value">0</div>
+    </div>
+    
+    <div class="dimension-section medium-impact-section">
+        <h3>中影响问题 <span class="impact-badge medium">中</span></h3>
+        <div class="subsection">
+            <ul class="issue-list medium-impact-issues" id="medium-impact-issues">
+                <li>无中影响问题</li>
+            </ul>
         </div>
-        <div class="score-box">
-            <div class="score-label">可访问性</div>
-            <div class="score-value accessibility-score" id="accessibility-score-value">0</div>
-        </div>
-        <div class="score-box">
-            <div class="score-label">安全性</div>
-            <div class="score-value security-score" id="security-score-value">0</div>
+    </div>
+    
+    <div class="dimension-section low-impact-section">
+        <h3>低影响问题 <span class="impact-badge low">低</span></h3>
+        <div class="subsection">
+            <ul class="issue-list low-impact-issues" id="low-impact-issues">
+                <li>无低影响问题</li>
+            </ul>
         </div>
     </div>
 </div>
 
 <div class="section">
-    <h2>严重问题</h2>
-    <ul class="critical-issues-list" id="critical-issues">
-        <li>无严重问题</li>
-    </ul>
+    <h2>详细维度分析</h2>
+
+<div class="dimension-section">
+    <h3>性能体验</h3>
+    <div class="subsection">
+        <h4>发现问题</h4>
+        <ul class="issue-list performance-issues" id="performance-issues">
+            <li>无问题</li>
+        </ul>
+    </div>
+    <div class="subsection">
+        <h4>优化建议</h4>
+        <ul class="recommendation-list performance-recommendations" id="performance-recommendations">
+            <li>无建议</li>
+        </ul>
+    </div>
 </div>
 
-<div class="section">
-    <h2>各维度分析</h2>
-    
-    <div class="dimension-section">
-        <h3>导航体验</h3>
-        <div class="subsection">
-            <h4>发现问题</h4>
-            <ul class="issue-list navigation-issues" id="navigation-issues">
-                <li>无问题</li>
-            </ul>
-        </div>
-        <div class="subsection">
-            <h4>优化建议</h4>
-            <ul class="recommendation-list navigation-recommendations" id="navigation-recommendations">
-                <li>无建议</li>
-            </ul>
-        </div>
+<div class="dimension-section">
+    <h3>可访问性</h3>
+    <div class="subsection">
+        <h4>发现问题</h4>
+        <ul class="issue-list accessibility-issues" id="accessibility-issues">
+            <li>无问题</li>
+        </ul>
     </div>
-    
-    <div class="dimension-section">
-        <h3>视觉设计</h3>
-        <div class="subsection">
-            <h4>发现问题</h4>
-            <ul class="issue-list visual-issues" id="visual-issues">
-                <li>无问题</li>
-            </ul>
-        </div>
-        <div class="subsection">
-            <h4>优化建议</h4>
-            <ul class="recommendation-list visual-recommendations" id="visual-recommendations">
-                <li>无建议</li>
-            </ul>
-        </div>
+    <div class="subsection">
+        <h4>优化建议</h4>
+        <ul class="recommendation-list accessibility-recommendations" id="accessibility-recommendations">
+            <li>无建议</li>
+        </ul>
     </div>
-    
-    <div class="dimension-section">
-        <h3>表单设计</h3>
-        <div class="subsection">
-            <h4>发现问题</h4>
-            <ul class="issue-list form-issues" id="form-issues">
-                <li>无问题</li>
-            </ul>
-        </div>
-        <div class="subsection">
-            <h4>优化建议</h4>
-            <ul class="recommendation-list form-recommendations" id="form-recommendations">
-                <li>无建议</li>
-            </ul>
-        </div>
+</div>
+
+<div class="dimension-section">
+    <h3>安全性</h3>
+    <div class="subsection">
+        <h4>发现问题</h4>
+        <ul class="issue-list security-issues" id="security-issues">
+            <li>无问题</li>
+        </ul>
     </div>
-    
-    <div class="dimension-section">
-        <h3>信息架构</h3>
-        <div class="subsection">
-            <h4>发现问题</h4>
-            <ul class="issue-list information-issues" id="information-issues">
-                <li>无问题</li>
-            </ul>
-        </div>
-        <div class="subsection">
-            <h4>优化建议</h4>
-            <ul class="recommendation-list information-recommendations" id="information-recommendations">
-                <li>无建议</li>
-            </ul>
-        </div>
+    <div class="subsection">
+        <h4>优化建议</h4>
+        <ul class="recommendation-list security-recommendations" id="security-recommendations">
+            <li>无建议</li>
+        </ul>
     </div>
-    
-    <div class="dimension-section">
-        <h3>性能体验</h3>
-        <div class="subsection">
-            <h4>发现问题</h4>
-            <ul class="issue-list performance-issues" id="performance-issues">
-                <li>无问题</li>
-            </ul>
-        </div>
-        <div class="subsection">
-            <h4>优化建议</h4>
-            <ul class="recommendation-list performance-recommendations" id="performance-recommendations">
-                <li>无建议</li>
-            </ul>
-        </div>
-    </div>
-    
-    <div class="dimension-section">
-        <h3>可访问性</h3>
-        <div class="subsection">
-            <h4>发现问题</h4>
-            <ul class="issue-list accessibility-issues" id="accessibility-issues">
-                <li>无问题</li>
-            </ul>
-        </div>
-        <div class="subsection">
-            <h4>优化建议</h4>
-            <ul class="recommendation-list accessibility-recommendations" id="accessibility-recommendations">
-                <li>无建议</li>
-            </ul>
-        </div>
-    </div>
-    
-    <div class="dimension-section">
-        <h3>安全性</h3>
-        <div class="subsection">
-            <h4>发现问题</h4>
-            <ul class="issue-list security-issues" id="security-issues">
-                <li>无问题</li>
-            </ul>
-        </div>
-        <div class="subsection">
-            <h4>优化建议</h4>
-            <ul class="recommendation-list security-recommendations" id="security-recommendations">
-                <li>无建议</li>
-            </ul>
-        </div>
-    </div>
+</div>
 </div>
 
 <div class="section summary-section">

@@ -8,7 +8,7 @@ const CONFIG_FILE = path.join(__dirname, '..', 'config.json');
 const DEFAULT_CONFIG = {
     openaiApiKey: null,
     deepSeekApiKey: null,
-    primaryAI: 'openai'
+    primaryAI: 'deepseek'
 };
 
 class ConfigManager {

@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // 从localStorage获取报告数据
-    const reportData = JSON.parse(localStorage.getItem('currentReport') || '{}');
+    const reportData = JSON.parse(localStorage.getItem('uxReportData') || '{}');
     
     if (reportData && Object.keys(reportData).length > 0) {
         displayReport(reportData);
@@ -40,6 +40,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button class="btn-primary" onclick="window.location.href='/'" style="margin-top: 20px;">返回首页</button>
                 </div>
             `;
+        }
+    }
+    
+    // 添加页面信息展示
+    if (reportData && reportData.unifiedData && reportData.unifiedData.page_meta) {
+        const pageMeta = reportData.unifiedData.page_meta;
+        if (reportDateElement) {
+            const pageInfo = pageMeta.page_url || '未知页面';
+            reportDateElement.innerHTML = `${new Date().toLocaleString('zh-CN')}<br><small>分析页面: ${pageInfo}</small>`;
         }
     }
     
@@ -57,24 +66,24 @@ document.addEventListener('DOMContentLoaded', function() {
         // 1. 综合评分部分
         const overallScoreSection = createOverallScoreSection(result.overallScore);
         
-        // 2. 行业平均得分比较部分
-        const industryComparisonSection = createIndustryComparisonSection(result.overallScore);
+        // 2. 业务目标一致性评估
+        const businessGoalSection = createBusinessGoalSection(result.dimensions.businessGoalAlignment);
         
-        // 3. 各项详细分数部分
-        const detailedScoresSection = createDetailedScoresSection(result.dimensions);
+        // 3. 关键转化路径体验分析
+        const conversionPathSection = createConversionPathSection(result.dimensions.conversionPath);
         
-        // 4. 问题列表部分（显示问题的严重程度）
-        const issuesSection = createIssuesSection(result.dimensions, result.criticalIssues);
+        // 4. 体验问题与改进建议（按业务影响排序）
+        const experienceIssuesSection = createExperienceIssuesSection(result.dimensions.experienceIssues);
         
-        // 5. 优化建议部分（局部展示，且模糊遮罩，付费解锁）
-        const recommendationsSection = createRecommendationsSection(result.dimensions);
+        // 5. 总结评价
+        const summarySection = createSummarySection(result.summary);
         
         // 将各部分添加到报告内容区域
         reportContent.appendChild(overallScoreSection);
-        reportContent.appendChild(industryComparisonSection);
-        reportContent.appendChild(detailedScoresSection);
-        reportContent.appendChild(issuesSection);
-        reportContent.appendChild(recommendationsSection);
+        reportContent.appendChild(businessGoalSection);
+        reportContent.appendChild(conversionPathSection);
+        reportContent.appendChild(experienceIssuesSection);
+        reportContent.appendChild(summarySection);
         
         // 绑定解锁按钮事件
         const unlockButtons = document.querySelectorAll('.unlock-btn');
@@ -108,35 +117,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * 创建行业平均得分比较部分
+     * 创建业务目标一致性评估部分
      */
-    function createIndustryComparisonSection(overallScore) {
+    function createBusinessGoalSection(businessGoalData) {
         const section = document.createElement('div');
-        section.className = 'report-section industry-comparison-section';
-        
-        // 行业平均分（模拟数据）
-        const industryAverage = 72;
-        const difference = overallScore - industryAverage;
-        const differenceText = difference >= 0 ? `高于行业平均 ${difference} 分` : `低于行业平均 ${Math.abs(difference)} 分`;
-        const differenceColor = difference >= 0 ? '#4CAF50' : '#F44336';
+        section.className = 'report-section business-goal-section';
         
         section.innerHTML = `
             <div class="section-header">
-                <h2>行业对比</h2>
+                <h2>业务目标一致性评估</h2>
             </div>
-            <div class="industry-comparison-container">
-                <div class="comparison-item">
-                    <div class="comparison-label">您的得分</div>
-                    <div class="comparison-value" style="color: ${getScoreColor(overallScore)}">${overallScore || '无'}</div>
-                </div>
-                <div class="comparison-item">
-                    <div class="comparison-label">行业平均</div>
-                    <div class="comparison-value" style="color: ${getScoreColor(industryAverage)}">${industryAverage}</div>
-                </div>
-                <div class="comparison-item">
-                    <div class="comparison-label">差距</div>
-                    <div class="comparison-value" style="color: ${differenceColor}">${differenceText}</div>
-                </div>
+            <div class="subsection">
+                <p>${businessGoalData.assessment || '暂无评估'}</p>
             </div>
         `;
         
@@ -144,117 +136,133 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * 创建各项详细分数部分
+     * 创建关键转化路径体验分析部分
      */
-    function createDetailedScoresSection(dimensions) {
+    function createConversionPathSection(conversionPathData) {
         const section = document.createElement('div');
-        section.className = 'report-section detailed-scores-section';
+        section.className = 'report-section conversion-path-section';
         
-        let scoresHTML = '<div class="section-header"><h2>各项详细评分</h2></div>';
-        scoresHTML += '<div class="detailed-scores-container">';
-        
-        if (dimensions) {
-            Object.keys(dimensions).forEach(dimName => {
-                const dimData = dimensions[dimName];
-                const score = dimData.score || 0;
-                const dimLabel = getDimensionLabel(dimName);
-                
-                scoresHTML += `
-                    <div class="score-item">
-                        <div class="score-label">${dimLabel}</div>
-                        <div class="score-value" style="color: ${getScoreColor(score)}">${score}</div>
-                    </div>
-                `;
-            });
+        // 生成问题列表HTML
+        let issuesHTML = '<li>无发现的问题</li>';
+        if (conversionPathData.issues && conversionPathData.issues.length > 0) {
+            issuesHTML = conversionPathData.issues.map(issue => `
+                <li>
+                    <div class="issue-description">${issue.description}</div>
+                    <div class="business-impact">业务影响：${issue.businessImpact}</div>
+                </li>
+            `).join('');
         }
         
-        scoresHTML += '</div>';
-        section.innerHTML = scoresHTML;
+        section.innerHTML = `
+            <div class="section-header">
+                <h2>关键转化路径体验分析</h2>
+            </div>
+            <div class="subsection">
+                <h3>路径摩擦点分析</h3>
+                <ul class="critical-issues-list">
+                    ${issuesHTML}
+                </ul>
+            </div>
+        `;
         
         return section;
     }
     
     /**
-     * 创建问题列表部分
+     * 创建体验问题与改进建议部分（按业务影响排序）
      */
-    function createIssuesSection(dimensions, criticalIssues) {
+    function createExperienceIssuesSection(experienceIssuesData) {
         const section = document.createElement('div');
-        section.className = 'report-section issues-section';
+        section.className = 'report-section experience-issues-section';
         
-        let issuesHTML = '<div class="section-header"><h2>发现问题</h2></div>';
+        // 生成高影响问题HTML
+        let highImpactHTML = '<li>无高影响问题</li>';
+        if (experienceIssuesData.highImpact.issues && experienceIssuesData.highImpact.issues.length > 0) {
+            highImpactHTML = experienceIssuesData.highImpact.issues.map(issue => `
+                <li>
+                    <div class="issue-description">${issue.description}</div>
+                    <div class="business-impact">业务影响：${issue.businessImpact}</div>
+                    ${issue.suggestion ? `<div class="suggestion">具体建议：${issue.suggestion}</div>` : ''}
+                </li>
+            `).join('');
+        }
         
-        // 严重问题
-        if (criticalIssues && criticalIssues.length > 0) {
-            issuesHTML += `
-                <div class="issues-category critical">
-                    <h3>严重问题</h3>
-                    <ul class="issues-list">
-                        ${criticalIssues.map(issue => `<li class="issue-item critical">${issue}</li>`).join('')}
+        // 生成中影响问题HTML
+        let mediumImpactHTML = '<li>无中影响问题</li>';
+        if (experienceIssuesData.mediumImpact.issues && experienceIssuesData.mediumImpact.issues.length > 0) {
+            mediumImpactHTML = experienceIssuesData.mediumImpact.issues.map(issue => `
+                <li>
+                    <div class="issue-description">${issue.description}</div>
+                    <div class="business-impact">业务影响：${issue.businessImpact}</div>
+                    ${issue.suggestion ? `<div class="suggestion">具体建议：${issue.suggestion}</div>` : ''}
+                </li>
+            `).join('');
+        }
+        
+        // 生成低影响问题HTML
+        let lowImpactHTML = '<li>无低影响问题</li>';
+        if (experienceIssuesData.lowImpact.issues && experienceIssuesData.lowImpact.issues.length > 0) {
+            lowImpactHTML = experienceIssuesData.lowImpact.issues.map(issue => `
+                <li>
+                    <div class="issue-description">${issue.description}</div>
+                    <div class="business-impact">业务影响：${issue.businessImpact}</div>
+                    ${issue.suggestion ? `<div class="suggestion">具体建议：${issue.suggestion}</div>` : ''}
+                </li>
+            `).join('');
+        }
+        
+        section.innerHTML = `
+            <div class="section-header">
+                <h2>体验问题与改进建议（按业务影响排序）</h2>
+            </div>
+            
+            <div class="dimension-section high-impact-section">
+                <h3>高影响问题 <span class="impact-badge high">高</span></h3>
+                <div class="subsection">
+                    <ul class="issue-list high-impact-issues">
+                        ${highImpactHTML}
                     </ul>
                 </div>
-            `;
-        }
-        
-        // 各维度问题
-        if (dimensions) {
-            Object.keys(dimensions).forEach(dimName => {
-                const dimData = dimensions[dimName];
-                const dimLabel = getDimensionLabel(dimName);
-                
-                if (dimData.issues && dimData.issues.length > 0) {
-                    issuesHTML += `
-                        <div class="issues-category">
-                            <h3>${dimLabel}</h3>
-                            <ul class="issues-list">
-                                ${dimData.issues.map(issue => `<li class="issue-item">${issue}</li>`).join('')}
-                            </ul>
-                        </div>
-                    `;
-                }
-            });
-        }
-        
-        section.innerHTML = issuesHTML;
-        return section;
-    }
-    
-    /**
-     * 创建优化建议部分（带遮罩）
-     */
-    function createRecommendationsSection(dimensions) {
-        const section = document.createElement('div');
-        section.className = 'report-section recommendations-section';
-        
-        let recommendationsHTML = '<div class="section-header"><h2>优化建议</h2></div>';
-        recommendationsHTML += '<div class="recommendations-container recommendations-mask">';
-        
-        // 各维度建议
-        if (dimensions) {
-            Object.keys(dimensions).forEach(dimName => {
-                const dimData = dimensions[dimName];
-                const dimLabel = getDimensionLabel(dimName);
-                
-                if (dimData.recommendations && dimData.recommendations.length > 0) {
-                    recommendationsHTML += `
-                        <div class="recommendations-category">
-                            <h3>${dimLabel}</h3>
-                            <ul class="recommendations-list">
-                                ${dimData.recommendations.map(rec => `<li class="recommendation-item">${rec}</li>`).join('')}
-                            </ul>
-                        </div>
-                    `;
-                }
-            });
-        }
-        
-        recommendationsHTML += `
-                <div class="mask-overlay">
-                    <button class="unlock-btn btn-primary">9.9元解锁完整报告</button>
+            </div>
+            
+            <div class="dimension-section medium-impact-section">
+                <h3>中影响问题 <span class="impact-badge medium">中</span></h3>
+                <div class="subsection">
+                    <ul class="issue-list medium-impact-issues">
+                        ${mediumImpactHTML}
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="dimension-section low-impact-section">
+                <h3>低影响问题 <span class="impact-badge low">低</span></h3>
+                <div class="subsection">
+                    <ul class="issue-list low-impact-issues">
+                        ${lowImpactHTML}
+                    </ul>
                 </div>
             </div>
         `;
         
-        section.innerHTML = recommendationsHTML;
+        return section;
+    }
+    
+    /**
+     * 创建总结评价部分
+     */
+    function createSummarySection(summaryText) {
+        const section = document.createElement('div');
+        section.className = 'report-section summary-section';
+        
+        section.innerHTML = `
+            <div class="section-header">
+                <h2>总结评价</h2>
+            </div>
+            <div class="subsection">
+                <p class="summary-text">${summaryText || '暂无总结'}</p>
+            </div>
+        `;
+        
         return section;
     }
     

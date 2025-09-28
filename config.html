@@ -173,11 +173,11 @@
             <div class="form-group">
                 <label>选择主用AI模型</label>
                 <div class="model-selector">
-                    <div class="model-option selected" data-model="openai">
+                    <div class="model-option" data-model="openai">
                         <h3>OpenAI</h3>
                         <p>GPT-3.5 Turbo模型</p>
                     </div>
-                    <div class="model-option" data-model="deepseek">
+                    <div class="model-option selected" data-model="deepseek">
                         <h3>DeepSeek</h3>
                         <p>DeepSeek Chat模型</p>
                     </div>
@@ -195,7 +195,7 @@
             // 从localStorage加载配置
             const openaiKey = localStorage.getItem('openai_api_key');
             const deepseekKey = localStorage.getItem('deepseek_api_key');
-            const primaryModel = localStorage.getItem('primary_ai') || 'openai';
+            const primaryModel = localStorage.getItem('primary_ai') || 'deepseek';
             
             if (openaiKey) {
                 document.getElementById('openai-key').value = openaiKey;

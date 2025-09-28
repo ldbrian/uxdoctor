@@ -50,12 +50,12 @@ router.post('/update-config', async (req, res) => {
     aiAnalyzer.updateConfig({
       openaiKey: openaiKey || null,
       deepseekKey: deepseekKey || null,
-      primaryAI: primaryAI || 'openai'
+      primaryAI: primaryAI || 'deepseek'
     });
     
     // 持久化非敏感配置
     const success = await configManager.updateConfig({
-      primaryAI: primaryAI || 'openai'
+      primaryAI: primaryAI || 'deepseek'
     });
     
     if (success) {
@@ -63,7 +63,7 @@ router.post('/update-config', async (req, res) => {
         success: true, 
         message: '配置更新成功',
         data: {
-          primaryAI: primaryAI || 'openai'
+          primaryAI: primaryAI || 'deepseek'
         }
       });
     } else {
@@ -119,7 +119,7 @@ router.post('/test-config', async (req, res) => {
 // 分析URL
 router.post('/analyze-url', async (req, res) => {
   try {
-    const { url, deviceType } = req.body;
+    const { url, deviceType, industry, businessGoal, keyAction, targetUsers, additionalInfo } = req.body;
     
     if (!url) {
       return res.status(400).json({
@@ -129,20 +129,24 @@ router.post('/analyze-url', async (req, res) => {
     }
     
     // 使用分析引擎分析URL
-    const result = await analysisEngine.analyzeURL(url);
-    
-    // 添加设备类型信息到结果中
-    result.deviceType = deviceType;
+    const result = await analysisEngine.analyzeURL(url, {
+      deviceType,
+      industry,
+      businessGoal,
+      keyAction,
+      targetUsers,
+      additionalInfo
+    });
     
     res.json({
       success: true,
       data: result
     });
   } catch (error) {
-    console.error('URL分析错误:', error);
-    res.status(500).json({
-      success: false,
-      error: '分析过程中发生错误'
+    console.error('URL分析失败:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'URL分析失败: ' + error.message 
     });
   }
 });
@@ -150,34 +154,58 @@ router.post('/analyze-url', async (req, res) => {
 // 分析截图
 router.post('/analyze-screenshot', upload.single('screenshot'), async (req, res) => {
   try {
-    const { deviceType } = req.body;
-    
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        error: '未提供截图文件'
+        error: '截图文件是必需的'
       });
     }
     
+    const deviceType = req.body.deviceType || 'auto';
+    
+    // 获取业务相关信息
+    const industry = req.body.industry || '';
+    const businessGoal = req.body.businessGoal || '';
+    const keyAction = req.body.keyAction || '';
+    const targetUsers = req.body.targetUsers || '';
+    const additionalInfo = req.body.additionalInfo || '';
+    
     // 使用分析引擎分析截图
-    const result = await analysisEngine.analyzeScreenshot(req.file);
+    const result = await analysisEngine.analyzeScreenshot(req.file.path, {
+      deviceType,
+      industry,
+      businessGoal,
+      keyAction,
+      targetUsers,
+      additionalInfo
+    });
     
-    // 添加设备类型信息到结果中
-    result.deviceType = deviceType;
-    
-    // 清理上传的文件
-    const fs = require('fs').promises;
-    await fs.unlink(req.file.path);
+    // 删除临时文件
+    try {
+      await fs.unlink(req.file.path);
+    } catch (unlinkError) {
+      console.warn('删除临时文件失败:', unlinkError);
+    }
     
     res.json({
       success: true,
       data: result
     });
   } catch (error) {
-    console.error('截图分析错误:', error);
-    res.status(500).json({
-      success: false,
-      error: '分析过程中发生错误'
+    console.error('截图分析失败:', error);
+    
+    // 删除可能存在的临时文件
+    if (req.file) {
+      try {
+        await fs.unlink(req.file.path);
+      } catch (unlinkError) {
+        console.warn('删除临时文件失败:', unlinkError);
+      }
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      error: '截图分析失败: ' + error.message 
     });
   }
 });

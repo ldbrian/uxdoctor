@@ -5,6 +5,7 @@
 
 // 导入规则库
 const { usabilityRules } = require('./usability-rules.js');
+const { aiAnalyzer } = require('./ai-analyzer.js'); // 添加这一行来导入aiAnalyzer
 
 // 简单的内存缓存
 const analysisCache = new Map();
@@ -33,28 +34,33 @@ class UXAnalysisEngine {
     /**
      * 分析网站URL
      * @param {string} url - 网站URL
+     * @param {Object} options - 分析选项
      * @returns {Promise<Object>} 分析结果
      */
-    async analyzeURL(url) {
+    async analyzeURL(url, options = {}) {
+        const cacheKey = `${url}_${JSON.stringify(options)}`;
+        
         // 检查缓存
-        if (analysisCache.has(url)) {
-            const cached = analysisCache.get(url);
+        if (analysisCache.has(cacheKey)) {
+            const cached = analysisCache.get(cacheKey);
             if (Date.now() - cached.timestamp < CACHE_TTL) {
                 console.log('从缓存返回结果:', url);
                 return Promise.resolve(cached.result);
             } else {
                 // 缓存过期，删除
-                analysisCache.delete(url);
+                analysisCache.delete(cacheKey);
             }
         }
 
         // 在实际实现中，这里会调用真实的分析服务
         // 目前我们模拟分析过程
         return new Promise((resolve) => {
-            setTimeout(() => {
-                const result = this.generateMockResult(url);
+            setTimeout(async () => {
+                // 调用AI分析器进行真实分析
+                const result = await aiAnalyzer.analyzeURL(url, options);
+                
                 // 缓存结果
-                analysisCache.set(url, {
+                analysisCache.set(cacheKey, {
                     result: result,
                     timestamp: Date.now()
                 });
@@ -65,12 +71,13 @@ class UXAnalysisEngine {
 
     /**
      * 分析截图
-     * @param {File} screenshot - 截图文件
+     * @param {string} screenshotPath - 截图文件路径
+     * @param {Object} options - 分析选项
      * @returns {Promise<Object>} 分析结果
      */
-    async analyzeScreenshot(screenshot) {
+    async analyzeScreenshot(screenshotPath, options = {}) {
         // 为截图生成唯一标识符
-        const screenshotId = screenshot.originalname || 'screenshot_' + Date.now();
+        const screenshotId = screenshotPath + '_' + JSON.stringify(options);
         
         // 检查缓存
         if (analysisCache.has(screenshotId)) {
@@ -87,8 +94,10 @@ class UXAnalysisEngine {
         // 在实际实现中，这里会处理截图并进行分析
         // 目前我们模拟分析过程
         return new Promise((resolve) => {
-            setTimeout(() => {
-                const result = this.generateMockResult(screenshotId);
+            setTimeout(async () => {
+                // 调用AI分析器进行真实分析
+                const result = await aiAnalyzer.analyzeScreenshot(screenshotPath, options);
+                
                 // 缓存结果
                 analysisCache.set(screenshotId, {
                     result: result,

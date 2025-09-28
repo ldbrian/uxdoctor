@@ -227,7 +227,135 @@ async function handleFormSubmit() {
         // 生成报告
         generateReport(result);
         if (loadingSection) loadingSection.classList.add('hidden');
-        if (resultsSection) resultsSection.classList.remove('hidden');
+    } catch (error) {
+        console.error('分析出错:', error);
+        showError('分析过程中发生错误: ' + error.message);
+        if (loadingSection) loadingSection.classList.add('hidden');
+        if (uploadSection) uploadSection.classList.remove('hidden');
+    }
+}
+
+/**
+ * 处理表单提交
+ * @param {Event} e - 事件对象
+ */
+async function handleSubmit(e) {
+    e.preventDefault();
+    
+    // 获取表单数据
+    const url = urlInput.value.trim();
+    const screenshot = screenshotInput.files[0];
+    const prototypeUrl = prototypeInput.value.trim();
+    
+    // 获取业务相关信息
+    const industry = document.getElementById('industry-input').value.trim();
+    const businessGoal = document.getElementById('business-goal-input').value.trim();
+    const keyAction = document.getElementById('key-action-input').value.trim();
+    const targetUsers = document.getElementById('target-users-input').value.trim();
+    const additionalInfo = document.getElementById('additional-info').value.trim();
+    
+    // 检查输入
+    if (!url && !screenshot) {
+        showError('请提供网站URL或上传截图');
+        return;
+    }
+    
+    // 检查是否提供了业务相关信息，并给出提示
+    const hasBusinessInfo = industry || businessGoal || keyAction || targetUsers || additionalInfo;
+    if (!hasBusinessInfo) {
+        const confirmSubmit = confirm('您未提供业务相关信息（行业、业务目标等），这可能导致分析报告准确性下降。是否继续提交？');
+        if (!confirmSubmit) {
+            return;
+        }
+    }
+    
+    // 获取设备类型
+    let deviceType = 'auto';
+    deviceTypeInputs.forEach(input => {
+        if (input.checked) {
+            deviceType = input.value;
+        }
+    });
+    
+    // 显示加载状态
+    if (uploadSection) uploadSection.classList.add('hidden');
+    if (loadingSection) loadingSection.classList.remove('hidden');
+    
+    try {
+        let result;
+        
+        // 根据输入类型调用相应的分析API
+        if (screenshot) {
+            // 处理截图上传
+            const formData = new FormData();
+            formData.append('screenshot', screenshot);
+            formData.append('deviceType', deviceType);
+            
+            // 添加业务相关信息到表单数据
+            if (industry) formData.append('industry', industry);
+            if (businessGoal) formData.append('businessGoal', businessGoal);
+            if (keyAction) formData.append('keyAction', keyAction);
+            if (targetUsers) formData.append('targetUsers', targetUsers);
+            if (additionalInfo) formData.append('additionalInfo', additionalInfo);
+            
+            const response = await fetch('http://localhost:8080/api/analyze-screenshot', {
+                method: 'POST',
+                body: formData
+            });
+            
+            console.log('截图分析响应:', response);
+            
+            const data = await response.json();
+            console.log('截图分析返回数据:', data);
+            
+            if (!data.success) {
+                throw new Error(data.error || '分析失败');
+            }
+            result = data.data;
+        } else if (url) {
+            // 处理URL分析
+            const response = await fetch('http://localhost:8080/api/analyze-url', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    url, 
+                    deviceType,
+                    industry,
+                    businessGoal,
+                    keyAction,
+                    targetUsers,
+                    additionalInfo
+                })
+            });
+            
+            console.log('URL分析响应:', response);
+            
+            const data = await response.json();
+            console.log('URL分析返回数据:', data);
+            
+            if (!data.success) {
+                throw new Error(data.error || '分析失败');
+            }
+            result = data.data;
+        } else {
+            throw new Error('请提供URL或上传截图');
+        }
+        
+        console.log('分析结果:', result);
+        
+        // 保存到历史记录
+        if (screenshot) {
+            saveToHistory(result, `截图: ${screenshot.name}`, deviceType);
+        } else if (url) {
+            saveToHistory(result, url, deviceType);
+        }
+        
+        // 生成报告
+        generateReport(result);
+        if (loadingSection) loadingSection.classList.add('hidden');
+
     } catch (error) {
         console.error('分析出错:', error);
         showError('分析过程中发生错误: ' + error.message);
@@ -576,7 +704,7 @@ async function checkAPIConfig() {
     // 从localStorage读取配置
     const openaiKey = localStorage.getItem('openai_api_key');
     const deepseekKey = localStorage.getItem('deepseek_api_key');
-    const primaryAI = localStorage.getItem('primary_ai') || 'openai';
+    const primaryAI = localStorage.getItem('primary_ai') || 'deepseek';
     
     // 如果有配置，发送到后端
     if (openaiKey || deepseekKey) {
