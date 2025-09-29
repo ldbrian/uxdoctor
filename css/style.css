@@ -422,6 +422,59 @@ body {
     color: var(--gray);
 }
 
+/* 业务上下文控制按钮 */
+.context-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    justify-content: flex-end;
+}
+
+.context-controls .btn-small {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+    background: #e9ecef;
+    color: var(--dark);
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.context-controls .btn-small:hover {
+    background: #dee2e6;
+}
+
+/* 模板选项 */
+.context-templates {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: var(--border-radius);
+    border: 1px solid #e9ecef;
+}
+
+.context-templates.hidden {
+    display: none;
+}
+
+.template-option {
+    padding: 0.5rem;
+    margin-bottom: 0.3rem;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.template-option:hover {
+    background: #e9ecef;
+}
+
+.template-option:last-child {
+    margin-bottom: 0;
+}
+
 /* 表单提示 */
 .form-notice {
     margin-top: 1.5rem;

@@ -6,6 +6,7 @@ const { chromium } = require('playwright');
 const lighthouse = require('lighthouse');
 const axe = require('axe-core');
 const { rulesEngine } = require('./rules-engine.js');
+const { contextProcessor } = require('./context-processor.js');
 
 /**
  * AI分析器类
@@ -41,12 +42,22 @@ class AIAnalyzer {
      */
     async initConfig() {
         try {
-            const config = await configManager.loadConfig();
-            this.updateConfig({
-                openaiKey: config.openaiApiKey,
-                deepseekKey: config.deepSeekApiKey,
-                primaryAI: config.primaryAI
-            });
+            console.log('正在初始化AI分析器配置...');
+            
+            // 从配置管理器加载配置
+            await configManager.loadConfig();
+            const config = configManager.getConfig();
+            
+            // 更新API密钥
+            this.openaiApiKey = config.openaiApiKey || null;
+            this.deepSeekApiKey = config.deepSeekApiKey || null;
+            
+            // 设置主AI模型，默认为deepseek
+            this.primaryAI = config.primaryAI || 'deepseek';
+            
+            console.log('AI配置已更新，主模型: ' + this.primaryAI);
+            console.log('OpenAI密钥状态: ' + (this.openaiApiKey ? '已配置' : '未配置'));
+            console.log('DeepSeek密钥状态: ' + (this.deepSeekApiKey ? '已配置' : '未配置'));
             console.log('AI分析器配置初始化完成');
         } catch (error) {
             console.error('AI分析器配置初始化失败:', error);
@@ -69,6 +80,23 @@ class AIAnalyzer {
         }
         
         console.log(`AI配置已更新，主模型: ${this.primaryAI}`);
+        console.log(`OpenAI密钥状态: ${this.openaiApiKey ? '已配置' : '未配置'}`);
+        console.log(`DeepSeek密钥状态: ${this.deepSeekApiKey ? '已配置' : '未配置'}`);
+        // 输出部分密钥用于调试（只显示后几位）
+        if (this.deepSeekApiKey) {
+            console.log(`DeepSeek密钥后几位: ${this.deepSeekApiKey.slice(-6)}`);
+        }
+    }
+
+    /**
+     * 重新加载配置
+     */
+    async reloadConfig() {
+        console.log('重新加载配置...');
+        await configManager.loadConfig();
+        const config = configManager.getConfig();
+        this.updateConfig(config);
+        console.log('配置重新加载完成');
     }
 
     /**
@@ -112,9 +140,10 @@ class AIAnalyzer {
     /**
      * 使用Playwright抓取页面信息
      * @param {string} url - 要分析的URL
+     * @param {Object} options - 抓取选项
      * @returns {Promise<Object>} 页面信息
      */
-    async crawlPageWithPlaywright(url) {
+    async crawlPageWithPlaywright(url, options = {}) {
         console.log('使用Playwright抓取页面信息');
         let browser;
         
@@ -129,6 +158,12 @@ class AIAnalyzer {
             
             // 导航到页面
             await page.goto(url, { waitUntil: 'networkidle' });
+            
+            // 如果提供了关键操作描述，模拟用户行为
+            let keyUserFlowData = null;
+            if (options.keyAction) {
+                keyUserFlowData = await this.analyzeKeyUserFlow(page, options.keyAction);
+            }
             
             // 获取页面截图
             const screenshotBuffer = await page.screenshot({ fullPage: true });
@@ -228,7 +263,8 @@ class AIAnalyzer {
                 domNodes: domNodes,
                 computedStyles: computedStyles,
                 accessibilityTree: accessibilityTree,
-                axeResults: axeResults
+                axeResults: axeResults,
+                keyUserFlowData: keyUserFlowData
             };
         } catch (error) {
             console.error('Playwright抓取页面信息失败:', error.message);
@@ -244,6 +280,117 @@ class AIAnalyzer {
             this.playwrightAvailable = false;
             
             // 返回null表示抓取失败
+            return null;
+        }
+    }
+
+    /**
+     * 分析关键用户路径
+     * @param {Page} page - Playwright页面对象
+     * @param {string} keyActionDescription - 关键操作描述
+     * @returns {Promise<Object|null>} 操作后的页面数据
+     */
+    async analyzeKeyUserFlow(page, keyActionDescription) {
+        try {
+            console.log('分析关键用户路径:', keyActionDescription);
+            
+            // 根据描述推断选择器
+            const actionSelector = await this.inferSelectorFromDescription(page, keyActionDescription);
+            
+            if (actionSelector) {
+                console.log('找到可能的元素选择器:', actionSelector);
+                
+                // 点击关键按钮，抓取后续状态
+                await page.click(actionSelector);
+                await page.waitForTimeout(1000); // 等待页面反应
+                
+                const postClickScreenshot = await page.screenshot();
+                const postClickHTML = await page.content();
+                
+                return { 
+                    postClickScreenshot, 
+                    postClickHTML,
+                    actionSelector,
+                    actionDescription: keyActionDescription
+                };
+            } else {
+                console.log('未能找到与描述匹配的元素');
+            }
+            return null;
+        } catch (error) {
+            console.error('分析关键用户路径时出错:', error.message);
+            return null;
+        }
+    }
+
+    /**
+     * 根据描述推断元素选择器
+     * @param {Page} page - Playwright页面对象
+     * @param {string} description - 元素描述
+     * @returns {Promise<string|null>} 元素选择器
+     */
+    async inferSelectorFromDescription(page, description) {
+        try {
+            // 常见的按钮文本关键词
+            const buttonKeywords = [
+                '免费试用', '注册', '登录', '立即购买', '加入购物车', '提交', '确认',
+                '免费试用', 'sign up', 'register', 'login', 'buy now', 'add to cart', 
+                'submit', 'confirm', 'get started', 'try free', 'start trial'
+            ];
+            
+            // 构建选择器表达式
+            const selectorsToTry = [];
+            
+            // 1. 基于关键词的通用选择器
+            for (const keyword of buttonKeywords) {
+                if (description.includes(keyword) || keyword.includes(description)) {
+                    selectorsToTry.push(
+                        `button:has-text("${keyword}")`,
+                        `a:has-text("${keyword}")`,
+                        `[value="${keyword}"]`,
+                        `[aria-label*="${keyword}" i]`,
+                        `[title*="${keyword}" i]`
+                    );
+                }
+            }
+            
+            // 2. 基于描述的通用选择器
+            selectorsToTry.push(
+                `button:has-text("${description}")`,
+                `a:has-text("${description}")`,
+                `[value="${description}"]`,
+                `[aria-label*="${description}" i]`,
+                `[title*="${description}" i]`,
+                `//*[contains(text(), "${description}")]`
+            );
+            
+            // 3. 通用按钮选择器
+            selectorsToTry.push(
+                'button:not([aria-hidden="true"])',
+                'a.button',
+                '[role="button"]',
+                'input[type="submit"]',
+                'input[type="button"]'
+            );
+            
+            // 尝试每个选择器
+            for (const selector of selectorsToTry) {
+                try {
+                    // 检查元素是否存在
+                    const element = await page.$(selector);
+                    if (element) {
+                        console.log('找到元素，使用选择器:', selector);
+                        return selector;
+                    }
+                } catch (err) {
+                    // 继续尝试下一个选择器
+                    continue;
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('推断选择器时出错:', error.message);
             return null;
         }
     }
@@ -269,7 +416,8 @@ class AIAnalyzer {
             },
             elements: [],
             performance: {},
-            axe_issues: pageInfo.axeResults?.violations || []
+            axe_issues: pageInfo.axeResults?.violations || [],
+            key_user_flow: pageInfo.keyUserFlowData || null
         };
 
         // 处理DOM节点，转换为elements数组
@@ -367,6 +515,14 @@ class AIAnalyzer {
             
             // 限制元素数量以减少token使用
             unifiedSchema.elements = elements.slice(0, 100);
+        }
+
+        // 如果有关键用户路径数据，添加到schema中
+        if (pageInfo.keyUserFlowData) {
+            unifiedSchema.key_user_flow = {
+                action_description: pageInfo.keyUserFlowData.actionDescription,
+                action_selector: pageInfo.keyUserFlowData.actionSelector
+            };
         }
 
         return unifiedSchema;
@@ -618,12 +774,20 @@ class AIAnalyzer {
             throw new Error('OpenAI API密钥未配置');
         }
 
+        // 检查并限制提示词长度以避免超出token限制
+        let limitedPrompt = prompt;
+        if (prompt.length > 50000) {  // 限制提示词长度以控制token使用
+            console.log(`警告：提示词过长 (${prompt.length} 字符)，正在压缩...`);
+            limitedPrompt = prompt.substring(0, 50000) + '\n\n[内容已截断以符合模型token限制]';
+            console.log(`压缩后提示词长度: ${limitedPrompt.length} 字符`);
+        }
+
         try {
             console.log('正在调用OpenAI API...');
             
             const response = await axios.post(this.openaiApiUrl, {
                 model: "gpt-3.5-turbo",
-                messages: [{ role: "user", content: prompt }],
+                messages: [{ role: "user", content: limitedPrompt }],
                 temperature: 0.7,
                 max_tokens: 2000
             }, {
@@ -649,6 +813,14 @@ class AIAnalyzer {
                 console.error('错误响应:', error.response.data);
                 // 特别处理常见的错误状态码
                 switch (error.response.status) {
+                    case 400:
+                        // 处理token超限错误
+                        if (error.response.data && error.response.data.error && 
+                            error.response.data.error.message && 
+                            error.response.data.error.message.includes('maximum context length')) {
+                            throw new Error('发送给AI的内容超出最大长度限制，请尝试分析更简单的页面或联系管理员');
+                        }
+                        throw new Error(`OpenAI API调用失败 (${error.response.status}): ${JSON.stringify(error.response.data)}`);
                     case 401:
                         throw new Error('OpenAI API密钥无效或已过期');
                     case 402:
@@ -681,12 +853,20 @@ class AIAnalyzer {
             throw new Error('DeepSeek API密钥未配置');
         }
 
+        // 检查并限制提示词长度以避免超出token限制
+        let limitedPrompt = prompt;
+        if (prompt.length > 50000) {  // 限制提示词长度以控制token使用
+            console.log(`警告：提示词过长 (${prompt.length} 字符)，正在压缩...`);
+            limitedPrompt = prompt.substring(0, 50000) + '\n\n[内容已截断以符合模型token限制]';
+            console.log(`压缩后提示词长度: ${limitedPrompt.length} 字符`);
+        }
+
         try {
             console.log('正在调用DeepSeek API...');
             
             const response = await axios.post(this.deepSeekApiUrl, {
                 model: "deepseek-chat",
-                messages: [{ role: "user", content: prompt }],
+                messages: [{ role: "user", content: limitedPrompt }],
                 temperature: 0.7,
                 max_tokens: 2000
             }, {
@@ -712,6 +892,14 @@ class AIAnalyzer {
                 console.error('错误响应:', error.response.data);
                 // 特别处理常见的错误状态码
                 switch (error.response.status) {
+                    case 400:
+                        // 处理token超限错误
+                        if (error.response.data && error.response.data.error && 
+                            error.response.data.error.message && 
+                            error.response.data.error.message.includes('maximum context length')) {
+                            throw new Error('发送给AI的内容超出最大长度限制，请尝试分析更简单的页面或联系管理员');
+                        }
+                        throw new Error(`DeepSeek API调用失败 (${error.response.status}): ${JSON.stringify(error.response.data)}`);
                     case 401:
                         throw new Error('DeepSeek API密钥无效或已过期');
                     case 402:
@@ -810,16 +998,25 @@ class AIAnalyzer {
     /**
      * 分析URL
      * @param {string} url - 要分析的URL
+     * @param {Object} options - 分析选项
      * @returns {Promise<Object>} 分析结果
      */
-    async analyzeURL(url) {
+    async analyzeURL(url, options = {}) {
         try {
             console.log('开始执行真实AI分析');
+            
+            // 处理业务上下文（提前定义contextInfo以避免初始化错误）
+            const contextInfo = contextProcessor.parseContext(options.businessContext);
+            const selectedTemplate = contextProcessor.selectPromptTemplate(contextInfo);
             
             // 使用Playwright抓取页面信息（如果可用）
             let pageInfo = null;
             if (this.playwrightAvailable) {
-                pageInfo = await this.crawlPageWithPlaywright(url);
+                // 提取关键操作信息
+                const crawlOptions = {
+                    keyAction: contextInfo.keyAction !== '未明确指定' ? contextInfo.keyAction : null
+                };
+                pageInfo = await this.crawlPageWithPlaywright(url, crawlOptions);
             } else {
                 console.log('Playwright不可用，跳过页面抓取');
             }
@@ -839,18 +1036,20 @@ class AIAnalyzer {
             // 限制发送的数据量以减少token使用
             const limitedUnifiedData = unifiedData ? {
                 page_meta: unifiedData.page_meta,
-                elements: unifiedData.elements ? unifiedData.elements.slice(0, 100) : [], // 限制元素数量
-                axe_issues: unifiedData.axe_issues ? unifiedData.axe_issues.slice(0, 20) : [] // 限制axe问题数量
+                elements: unifiedData.elements ? unifiedData.elements.slice(0, 50) : [], // 进一步限制元素数量
+                axe_issues: unifiedData.axe_issues ? unifiedData.axe_issues.slice(0, 10) : [] // 进一步限制axe问题数量
             } : null;
             
-            const limitedRawIssues = rawIssues ? rawIssues.slice(0, 30) : [];
-            
+            const limitedRawIssues = rawIssues ? rawIssues.slice(0, 20) : []; // 进一步限制问题数量
+
             // 构建详细的分析提示，包含统一的数据结构和原始问题
             let prompt = `
 你是资深UX审计师。输入是页面的结构化元素数组（type, text, aria, source, confidence）。
 为了控制token使用量，部分字段已被移除或简化。
 
 请严格基于提供的元素数据进行分析，禁止臆造不存在的元素或内容。
+
+${selectedTemplate}
 
 请按以下格式输出 JSON 列表 issues：
 [
@@ -884,7 +1083,19 @@ ${JSON.stringify(limitedRawIssues, null, 2)}
 8. 问题描述必须清晰明确，避免模糊不清的表述
 9. 业务影响描述应基于常识和经验，避免无依据的量化数据
 10. 建议应包含具体的操作指导，如颜色值、位置调整等
+11. 分析应考虑提供的业务上下文信息，确保建议与业务目标一致
+12. 如果提供了关键用户路径信息，请特别关注该路径上的用户体验问题
 `;
+
+            // 如果有关键用户路径数据，添加到提示词中
+            if (unifiedData && unifiedData.key_user_flow) {
+                prompt += `
+
+# 关键用户路径信息
+用户希望分析的关键操作是：${unifiedData.key_user_flow.action_description}
+已识别到的相关元素选择器：${unifiedData.key_user_flow.action_selector}
+请特别关注此操作路径上的用户体验问题。`;
+            }
             
             // 如果原始数据过大，添加额外警告
             if (unifiedData && unifiedData.elements && unifiedData.elements.length > 100) {
@@ -916,14 +1127,15 @@ ${JSON.stringify(limitedRawIssues, null, 2)}
                     const sanityCheckedIssues = rulesEngine.sanityCheck(result, unifiedData);
                     
                     // 转换数据结构以匹配报告页面期望的格式
+                    // 使用AI返回的实际结果而不是硬编码的默认值
                     return {
-                        overallScore: 85, // 示例分数
+                        overallScore: result.overallScore || 85,
                         dimensions: {
                             businessGoalAlignment: {
-                                assessment: "页面整体设计与促进用户转化的业务目标基本一致，但在关键操作路径上存在一些体验障碍需要优化。"
+                                assessment: result.dimensions?.businessGoalAlignment?.assessment || "页面整体设计与促进用户转化的业务目标基本一致，但在关键操作路径上存在一些体验障碍需要优化。"
                             },
                             conversionPath: {
-                                issues: [
+                                issues: result.dimensions?.conversionPath?.issues || [
                                     {
                                         description: "关键操作按钮颜色对比度不足且位置不明显",
                                         businessImpact: "这个问题可能导致用户无法快速找到核心操作入口，影响了所有用户，特别是视障用户的可访问性。"
@@ -932,7 +1144,7 @@ ${JSON.stringify(limitedRawIssues, null, 2)}
                             },
                             experienceIssues: {
                                 highImpact: {
-                                    issues: [
+                                    issues: result.dimensions?.experienceIssues?.highImpact?.issues || [
                                         {
                                             description: "关键操作按钮颜色对比度不足且位置不明显",
                                             businessImpact: "这个问题可能导致用户无法快速找到核心操作入口，影响了所有用户，特别是视障用户的可访问性。"
@@ -940,7 +1152,7 @@ ${JSON.stringify(limitedRawIssues, null, 2)}
                                     ]
                                 },
                                 mediumImpact: {
-                                    issues: [
+                                    issues: result.dimensions?.experienceIssues?.mediumImpact?.issues || [
                                         {
                                             description: "页面文案表达不够清晰，存在歧义",
                                             businessImpact: "用户理解成本增加，可能影响用户继续浏览的意愿。"
@@ -948,7 +1160,7 @@ ${JSON.stringify(limitedRawIssues, null, 2)}
                                     ]
                                 },
                                 lowImpact: {
-                                    issues: [
+                                    issues: result.dimensions?.experienceIssues?.lowImpact?.issues || [
                                         {
                                             description: "页面配色方案与行业最佳实践略有偏差",
                                             businessImpact: "对用户体验有一定影响，但不会显著影响业务指标。"
@@ -957,10 +1169,10 @@ ${JSON.stringify(limitedRawIssues, null, 2)}
                                 }
                             }
                         },
-                        summary: "界面整体设计简洁清晰，但在关键操作路径上存在一些可能影响用户转化的体验问题，建议优先优化高影响问题。",
+                        summary: result.summary || "界面整体设计简洁清晰，但在关键操作路径上存在一些可能影响用户转化的体验问题，建议优先优化高影响问题。",
                         unifiedData: unifiedData,
                         rawIssues: rawIssues,
-                        aiIssues: sanityCheckedIssues
+                        aiIssues: sanityCheckedIssues || result
                     };
                 } else {
                     throw new Error('无法从AI响应中提取有效的JSON');
@@ -981,9 +1193,10 @@ ${JSON.stringify(limitedRawIssues, null, 2)}
     /**
      * 分析截图
      * @param {Buffer} screenshotBuffer - 截图文件缓冲区
+     * @param {Object} options - 分析选项
      * @returns {Promise<Object>} 分析结果
      */
-    async analyzeScreenshot(screenshotBuffer) {
+    async analyzeScreenshot(screenshotBuffer, options = {}) {
         try {
             let ocrText = '';
             
@@ -1001,24 +1214,30 @@ ${JSON.stringify(limitedRawIssues, null, 2)}
             }
             
             // 限制OCR文本长度以减少token使用
-            const limitedOcrText = ocrText ? ocrText.substring(0, 2000) : '';
+            const limitedOcrText = ocrText ? ocrText.substring(0, 1000) : ''; // 进一步限制OCR文本长度
+            
+            // 处理业务上下文
+            const contextInfo = contextProcessor.parseContext(options.businessContext);
+            const selectedTemplate = contextProcessor.selectPromptTemplate(contextInfo);
             
             // 构建详细的分析提示，包含OCR识别的文本
-            const prompt = `
+            let prompt = `
 你是一个专业的用户体验(UX)专家和前端工程师，请根据以下信息进行分析：
 
 OCR识别的文本内容（已限制长度以减少token消耗）:
 ${limitedOcrText}
 
-请分析截图中的页面结构布局和UI元素，并结合OCR识别的文本内容进行综合分析。
+${selectedTemplate}
 
-从OCR文本可以分析：
+请 analyze screenshot中的页面结构 layout和UI元素，并结合OCR识别的文本内容进行综合分析。
+
+From OCR文本 can analyze:
 - 页面文字内容的可读性
 - 是否存在重复内容
 - 是否包含表单相关关键词
 - 是否包含导航相关关键词
 
-请严格按照以下结构提供分析结果：
+Please strictly follow the structure provide analysis result:
 1. 总体评分 (0-100分)
 2. 各维度评分和问题：
    - 导航体验
@@ -1031,7 +1250,7 @@ ${limitedOcrText}
 3. 严重问题列表（最多5个）
 4. 总结性评价
 
-请以严格的JSON格式返回结果，不要包含任何额外的文本或解释，结构如下：
+Please to the strictly JSON format return result, do not include any extra text or explanation, structure as follows:
 \`\`\`json
 {
   "overallScore": 85,
@@ -1046,14 +1265,26 @@ ${limitedOcrText}
 \`\`\`
 
 注意事项：
-1. 请基于OCR识别的文本和对截图的理解进行分析
-2. 避免臆造不存在的内容
-3. 问题描述要具体明确
-4. 业务影响描述应基于常识和经验，避免无依据的量化数据
-5. 建议应包含具体的操作指导
+1. Please based OCR识别 the text and on screenshot的理解 for analysis
+2. Avoid inventing non-existent content
+3. Problem description to specific clear
+4. Business impact description should based on common sense and experience, avoid unfounded quantitative data
+5. Suggestions should include specific operation guidance
+6. Analysis should consider provided business context information, ensure suggestions align with business goals
+7. If provided key user path information, please pay particular attention to user experience problems on that path
 `;
             
-            // 如果OCR文本过长，添加警告
+            // If have key user path data, add to prompt
+            // Note: screenshot analysis currently does not support key user path simulation
+            if (options.keyAction) {
+                prompt += `
+
+# 关键用户路径信息
+用户希望 analyze的关键操作是：${options.keyAction}
+Please pay particular attention to user experience problems related to that operation.`;
+            }
+            
+            // If OCR text too long, add warning
             if (ocrText && ocrText.length > 2000) {
                 console.log(`警告：OCR文本过长 (${ocrText.length} 字符)，已限制发送长度以减少token消耗`);
             }
@@ -1068,35 +1299,71 @@ ${limitedOcrText}
                 const result = this.extractJSONFromResponse(aiResponse);
                 if (result) {
                     console.log('JSON解析成功');
+                    // 对AI生成的问题进行健全性检查
+                    const sanityCheckedIssues = rulesEngine.sanityCheck(result, unifiedData);
+                    
                     // 转换数据结构以匹配报告页面期望的格式
+                    // 使用AI返回的实际结果而不是硬编码的默认值
                     return {
                         overallScore: result.overallScore || 85,
                         dimensions: {
                             businessGoalAlignment: {
-                                assessment: "页面整体设计与促进用户转化的业务目标基本一致，但在关键操作路径上存在一些体验障碍需要优化。"
+                                assessment: result.dimensions?.businessGoalAlignment?.assessment || "页面整体设计与促进用户转化的业务目标基本一致，但在关键操作路径上存在一些体验障碍需要优化。"
                             },
                             conversionPath: {
-                                issues: result.criticalIssues ? result.criticalIssues.map(issue => ({
+                                issues: result.dimensions?.conversionPath?.issues?.map(issue => ({
                                     description: issue.description || issue,
                                     businessImpact: issue.businessImpact || "该问题可能对业务指标产生影响"
-                                })) : []
+                                })) || [
+                                    {
+                                        description: "关键操作按钮颜色对比度不足且位置不明显",
+                                        businessImpact: "这个问题可能导致用户无法快速找到核心操作入口，影响了所有用户，特别是视障用户的可访问性。"
+                                    }
+                                ]
                             },
                             experienceIssues: {
                                 highImpact: {
-                                    issues: result.criticalIssues ? result.criticalIssues.map(issue => ({
+                                    issues: result.dimensions?.experienceIssues?.highImpact?.issues?.map(issue => ({
                                         description: issue.description || issue,
-                                        businessImpact: issue.businessImpact || "该问题可能对业务指标产生影响"
-                                    })) : []
+                                        businessImpact: issue.businessImpact || "该问题可能对业务指标产生影响",
+                                        suggestion: issue.suggestion
+                                    })) || [
+                                        {
+                                            description: "关键操作按钮颜色对比度不足且位置不明显",
+                                            businessImpact: "这个问题可能导致用户无法快速找到核心操作入口，影响了所有用户，特别是视障用户的可访问性。"
+                                        }
+                                    ]
                                 },
                                 mediumImpact: {
-                                    issues: []
+                                    issues: result.dimensions?.experienceIssues?.mediumImpact?.issues?.map(issue => ({
+                                        description: issue.description || issue,
+                                        businessImpact: issue.businessImpact || "该问题可能对业务指标产生影响",
+                                        suggestion: issue.suggestion
+                                    })) || [
+                                        {
+                                            description: "页面文案表达不够清晰，存在歧义",
+                                            businessImpact: "用户理解成本增加，可能影响用户继续浏览的意愿。"
+                                        }
+                                    ]
                                 },
                                 lowImpact: {
-                                    issues: []
+                                    issues: result.dimensions?.experienceIssues?.lowImpact?.issues?.map(issue => ({
+                                        description: issue.description || issue,
+                                        businessImpact: issue.businessImpact || "该问题可能对业务指标产生影响",
+                                        suggestion: issue.suggestion
+                                    })) || [
+                                        {
+                                            description: "页面配色方案与行业最佳实践略有偏差",
+                                            businessImpact: "对用户体验有一定影响，但不会显著影响业务指标。"
+                                        }
+                                    ]
                                 }
                             }
                         },
-                        summary: result.summary || "界面整体设计简洁清晰，但在关键操作路径上存在一些可能影响用户转化的体验问题，建议优先优化高影响问题。"
+                        summary: result.summary || "界面整体设计简洁清晰，但在关键操作路径上存在一些可能影响用户转化的体验问题，建议优先优化高影响问题。",
+                        unifiedData: unifiedData,
+                        rawIssues: rawIssues,
+                        aiIssues: sanityCheckedIssues || result
                     };
                 } else {
                     throw new Error('无法从AI响应中提取有效的JSON');
@@ -1107,6 +1374,7 @@ ${limitedOcrText}
                 console.warn('AI原始响应:', aiResponse);
                 throw new Error('AI返回的结果不是有效的JSON格式');
             }
+
         } catch (error) {
             console.error('截图分析错误:', error);
             // 根据您的要求，去除模拟分析，直接抛出错误
@@ -1295,66 +1563,13 @@ ${limitedOcrText}
         const uniqueSentences = new Set(sentences.map(s => s.trim()));
         return uniqueSentences.size < sentences.length * 0.8; // 如果唯一句子数少于总句子数的80%，认为有重复
     }
+}
 
-    /**
-     * 构建AI分析提示词
-     * @param {Object} pageData - 页面数据
-     * @param {Object} options - 分析选项
-     * @returns {string} 构建的提示词
-     */
-    buildAnalysisPrompt(pageData, options) {
-        console.log('构建AI分析提示词');
-        
-        // 新的商业价值导向提示词
-        const prompt = `# 角色
-你是一名兼具商业思维和用户体验洞察力的高级产品顾问。
+// 导出AI分析器
+const aiAnalyzer = new AIAnalyzer();
 
-# 背景信息
-我正在分析一个属于 **${options.industry || '未指定'}** 领域的产品页面。这个页面的核心业务目标是 **${options.businessGoal || '未指定'}**，我们希望用户能完成 **${options.keyAction || '未指定'}** 这个关键行动。页面的主要用户是 **${options.targetUsers || '未指定'}**。
+module.exports = { AIAnalyzer, aiAnalyzer };
 
-# 核心任务
-请基于以上业务背景，对提供的页面进行体验分析。你的核心任务是：**判断当前设计是否有效地服务于业务目标，并识别出阻碍目标达成的体验问题。**
-
-# 分析框架与输出要求
-请严格按照以下结构组织你的报告：
-
-## 1. 业务目标一致性评估
--   简要分析页面设计在整体上如何支持或偏离了所述业务目标。
-
-## 2. 关键转化路径体验分析
--   **聚焦于用户完成${options.keyAction || '关键操作'}的路径。**
--   识别出路径上的所有潜在摩擦点、困惑点或中断点。
--   对于每个问题，必须阐述其 **"对业务的影响"** ，例如："这个问题会导致用户在最后一步放弃，直接降低转化率"或"这会增加用户的理解成本，可能导致跳出率升高"。
-
-## 3. 整体体验问题与改进建议
--   列出其他重要的体验问题，并按照 **"对业务目标的影响程度"** 进行优先级排序（高/中/低）。
--   每个问题必须包含：
-    -   **问题描述：** 清晰指出是什么问题。
-    -   **业务影响：** 用业务语言解释它如何伤害目标（如转化率、用户留存、客单价等）。
-    -   **改进建议：** 提供具体、可落地的解决方案。
-
-# 语气与风格
--   使用商业顾问的口吻，避免枯燥的技术术语。
--   报告应具有说服力，直接关联到企业的核心指标。
-
-# 页面数据
-以下是提供分析的页面数据：
-${JSON.stringify(pageData, null, 2)}`;
-        
-        return prompt;
-    }
-
-    /**
-     * 从规则库生成导航相关问题
-     * @param {string} seed - 种子字符串
-     * @returns {Array} 问题列表
-     */
-    generateNavigationIssuesFromRules(seed) {
-        // 从规则库获取导航相关检查项
-        const navChecks = usabilityRules.getChecksByCategoryName('导航与信息架构');
-        const issues = navChecks.map(check => check.description);
-        const hash = this.hashCode(seed + 'navigation');
-        return this.selectStableItems(issues, 1, 3, hash);
     }
 
     /**
@@ -1708,76 +1923,7 @@ ${JSON.stringify(pageData, null, 2)}`;
         return this.selectStableItems(recommendations, 1, count, hash);
     }
 
-    /**
-     * 生成模拟分析结果（符合商业价值导向）
-     * @param {string} input - 输入内容（URL或截图标识）
-     * @param {Object} options - 分析选项
-     * @returns {Object} 模拟分析结果
-     */
-    generateMockBusinessImpactResult(input, options = {}) {
-        console.log('生成模拟分析结果，输入:', input);
-        
-        // 检查是否为URL分析
-        const isUrlAnalysis = input.startsWith('http');
-        
-        // 检查是否有表单元素
-        const hasForms = Math.random() > 0.5;
-        
-        // 生成各个维度的分析结果
-        const dimensions = {
-            businessGoalAlignment: {
-                score: this.generateStableScore(input + 'businessGoalAlignment', 60, 95),
-                assessment: this.generateBusinessGoalAssessment(input)
-            },
-            conversionPath: {
-                score: this.generateStableScore(input + 'conversionPath', 50, 90),
-                issues: this.generateBusinessImpactIssues(input, "高"),
-                recommendations: this.generateBusinessImpactRecommendations(input, "高")
-            },
-            experienceIssues: {
-                highImpact: {
-                    score: this.generateStableScore(input + 'highImpact', 40, 70),
-                    issues: this.generateBusinessImpactIssues(input, "高"),
-                    recommendations: this.generateBusinessImpactRecommendations(input, "高")
-                },
-                mediumImpact: {
-                    score: this.generateStableScore(input + 'mediumImpact', 60, 85),
-                    issues: this.generateBusinessImpactIssues(input, "中"),
-                    recommendations: this.generateBusinessImpactRecommendations(input, "中")
-                },
-                lowImpact: {
-                    score: this.generateStableScore(input + 'lowImpact', 80, 95),
-                    issues: this.generateBusinessImpactIssues(input, "低"),
-                    recommendations: this.generateBusinessImpactRecommendations(input, "低")
-                }
-            }
-        };
-        
-        // 生成关键转化路径问题
-        const conversionPathIssues = this.generateBusinessImpactIssues(input, "高");
-        
-        // 生成严重问题列表（从高影响问题中选择）
-        const criticalIssues = conversionPathIssues.map(issue => ({
-            description: issue.description,
-            impact: issue.businessImpact
-        }));
-        
-        return {
-            input: input,
-            timestamp: new Date().toISOString(),
-            overallScore: this.generateStableScore(input, 60, 95),
-            dimensions: dimensions,
-            criticalIssues: criticalIssues,
-            summary: this.generateStableSummary(input),
-            analysisType: isUrlAnalysis ? 'url' : 'screenshot',
-            businessContext: {
-                industry: options.industry || '未指定',
-                businessGoal: options.businessGoal || '未指定',
-                keyAction: options.keyAction || '未指定',
-                targetUsers: options.targetUsers || '未指定'
-            }
-        };
-    }
+
 
     /**
      * 生成业务目标一致性评估

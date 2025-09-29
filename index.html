@@ -67,32 +67,19 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="industry-input">行业领域（可选）</label>
-                        <input type="text" id="industry-input" placeholder="例如：电商、教育、金融等">
-                        <small class="form-help">提供行业信息有助于AI更准确地分析业务目标</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="business-goal-input">核心业务目标（可选）</label>
-                        <input type="text" id="business-goal-input" placeholder="例如：提升销售额、增加注册量等">
-                        <small class="form-help">明确业务目标有助于AI针对性分析</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="key-action-input">关键用户操作（可选）</label>
-                        <input type="text" id="key-action-input" placeholder="例如：完成购买、提交表单等">
-                        <small class="form-help">描述希望用户完成的关键操作</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="target-users-input">目标用户群体（可选）</label>
-                        <input type="text" id="target-users-input" placeholder="例如：年轻消费者、企业客户等">
-                        <small class="form-help">帮助AI更好地理解用户需求</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="additional-info">其他补充信息（可选）</label>
-                        <textarea id="additional-info" rows="3" placeholder="任何有助于分析的其他信息..."></textarea>
+                        <label for="business-context">业务上下文（可选）</label>
+                        <div class="context-controls">
+                            <button type="button" class="btn-small" id="smart-fill-btn">智能填充</button>
+                            <button type="button" class="btn-small" id="load-template-btn">加载模板</button>
+                            <button type="button" class="btn-small" id="clear-context-btn">清空</button>
+                        </div>
+                        <textarea id="business-context" rows="5" placeholder="您可以输入行业领域、核心业务目标、关键用户操作、目标用户群体等信息帮助，这会使得分析更加准确"></textarea>
+                        <div class="context-templates hidden" id="context-templates">
+                            <div class="template-option" data-template="电商">电商网站：提升销售额，关键操作是完成购买，目标用户是年轻消费者</div>
+                            <div class="template-option" data-template="SaaS">SaaS平台：获取注册用户，关键操作是注册账号，目标用户是中小企业</div>
+                            <div class="template-option" data-template="内容">内容平台：提高用户活跃度，关键操作是浏览内容，目标用户是大众用户</div>
+                        </div>
+                        <small class="form-help">提供业务上下文信息有助于AI更准确地分析业务目标。系统会记住您之前的输入。</small>
                     </div>
 
                     <button type="submit" class="btn-primary btn-block" id="submit-btn">开始分析</button>

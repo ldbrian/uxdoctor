@@ -29,6 +29,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // 加载历史记录
     loadHistory();
+    
+    // 初始化业务上下文功能
+    initBusinessContextFeatures();
 });
 
 /**
@@ -71,30 +74,34 @@ function updateConfigUI(config) {
     const openaiKeyElement = document.getElementById('openai-key-display');
     const deepseekKeyElement = document.getElementById('deepseek-key-display');
     
-    if (openaiKeyElement && config.openaiKey) {
-        openaiKeyElement.textContent = `••••••••${config.openaiKey.slice(-4)}`;
-        openaiKeyElement.parentElement.classList.add('configured');
-        openaiKeyElement.parentElement.classList.remove('unconfigured');
-    } else if (openaiKeyElement) {
-        openaiKeyElement.textContent = '未配置';
-        openaiKeyElement.parentElement.classList.add('unconfigured');
-        openaiKeyElement.parentElement.classList.remove('configured');
+    if (openaiKeyElement) {
+        if (config.openaiKey === 'configured') {
+            openaiKeyElement.textContent = '已配置';
+            openaiKeyElement.parentElement.classList.add('configured');
+            openaiKeyElement.parentElement.classList.remove('unconfigured');
+        } else {
+            openaiKeyElement.textContent = '未配置';
+            openaiKeyElement.parentElement.classList.add('unconfigured');
+            openaiKeyElement.parentElement.classList.remove('configured');
+        }
     }
     
-    if (deepseekKeyElement && config.deepseekKey) {
-        deepseekKeyElement.textContent = `••••••••${config.deepseekKey.slice(-4)}`;
-        deepseekKeyElement.parentElement.classList.add('configured');
-        deepseekKeyElement.parentElement.classList.remove('unconfigured');
-    } else if (deepseekKeyElement) {
-        deepseekKeyElement.textContent = '未配置';
-        deepseekKeyElement.parentElement.classList.add('unconfigured');
-        deepseekKeyElement.parentElement.classList.remove('configured');
+    if (deepseekKeyElement) {
+        if (config.deepseekKey === 'configured') {
+            deepseekKeyElement.textContent = '已配置';
+            deepseekKeyElement.parentElement.classList.add('configured');
+            deepseekKeyElement.parentElement.classList.remove('unconfigured');
+        } else {
+            deepseekKeyElement.textContent = '未配置';
+            deepseekKeyElement.parentElement.classList.add('unconfigured');
+            deepseekKeyElement.parentElement.classList.remove('configured');
+        }
     }
     
     // 更新配置状态提示
     const configStatus = document.getElementById('config-status');
     if (configStatus) {
-        if (config.openaiKey || config.deepseekKey) {
+        if (config.openaiKey === 'configured' || config.deepseekKey === 'configured') {
             configStatus.textContent = '配置已就绪';
             configStatus.className = 'config-status ready';
         } else {
@@ -149,6 +156,13 @@ function bindEventListeners() {
             this.classList.add('selected');
         });
     });
+    
+    // URL输入框事件 - 当URL改变时加载相关上下文
+    if (urlInput) {
+        urlInput.addEventListener('blur', function() {
+            loadBusinessContext();
+        });
+    }
 }
 
 /**
@@ -248,11 +262,7 @@ async function handleSubmit(e) {
     const prototypeUrl = prototypeInput.value.trim();
     
     // 获取业务相关信息
-    const industry = document.getElementById('industry-input').value.trim();
-    const businessGoal = document.getElementById('business-goal-input').value.trim();
-    const keyAction = document.getElementById('key-action-input').value.trim();
-    const targetUsers = document.getElementById('target-users-input').value.trim();
-    const additionalInfo = document.getElementById('additional-info').value.trim();
+    const businessContext = document.getElementById('business-context').value.trim();
     
     // 检查输入
     if (!url && !screenshot) {
@@ -261,8 +271,7 @@ async function handleSubmit(e) {
     }
     
     // 检查是否提供了业务相关信息，并给出提示
-    const hasBusinessInfo = industry || businessGoal || keyAction || targetUsers || additionalInfo;
-    if (!hasBusinessInfo) {
+    if (!businessContext) {
         const confirmSubmit = confirm('您未提供业务相关信息（行业、业务目标等），这可能导致分析报告准确性下降。是否继续提交？');
         if (!confirmSubmit) {
             return;
@@ -292,11 +301,7 @@ async function handleSubmit(e) {
             formData.append('deviceType', deviceType);
             
             // 添加业务相关信息到表单数据
-            if (industry) formData.append('industry', industry);
-            if (businessGoal) formData.append('businessGoal', businessGoal);
-            if (keyAction) formData.append('keyAction', keyAction);
-            if (targetUsers) formData.append('targetUsers', targetUsers);
-            if (additionalInfo) formData.append('additionalInfo', additionalInfo);
+            if (businessContext) formData.append('businessContext', businessContext);
             
             const response = await fetch('http://localhost:8080/api/analyze-screenshot', {
                 method: 'POST',
@@ -322,11 +327,7 @@ async function handleSubmit(e) {
                 body: JSON.stringify({ 
                     url, 
                     deviceType,
-                    industry,
-                    businessGoal,
-                    keyAction,
-                    targetUsers,
-                    additionalInfo
+                    businessContext
                 })
             });
             
@@ -405,7 +406,7 @@ async function handleConfigSubmit(e) {
         saveButton.textContent = '保存中...';
         saveButton.disabled = true;
         
-        // 发送配置更新请求
+        // 发送配置更新请求到服务器
         const response = await fetch('http://localhost:8080/api/update-config', {
             method: 'POST',
             headers: {
@@ -427,7 +428,11 @@ async function handleConfigSubmit(e) {
         if (result.success) {
             showNotification('配置已保存！', 'success');
             // 更新UI显示
-            updateConfigUI({ primaryAI: primaryModel });
+            updateConfigUI({ 
+                primaryAI: primaryModel,
+                openaiKey: openaiKey ? 'configured' : 'not_configured',
+                deepseekKey: deepseekKey ? 'configured' : 'not_configured'
+            });
         } else {
             showNotification('配置保存失败: ' + result.error, 'error');
         }
@@ -689,6 +694,214 @@ function generateReport(result) {
     
     // 跳转到报告页面
     window.location.href = 'report.html';
+}
+
+/**
+ * 初始化业务上下文功能
+ */
+function initBusinessContextFeatures() {
+    console.log('初始化业务上下文功能');
+    
+    // 绑定业务上下文相关事件
+    const smartFillBtn = document.getElementById('smart-fill-btn');
+    const loadTemplateBtn = document.getElementById('load-template-btn');
+    const clearContextBtn = document.getElementById('clear-context-btn');
+    const businessContextTextarea = document.getElementById('business-context');
+    const contextTemplates = document.getElementById('context-templates');
+    
+    if (smartFillBtn) {
+        smartFillBtn.addEventListener('click', handleSmartFill);
+    }
+    
+    if (loadTemplateBtn) {
+        loadTemplateBtn.addEventListener('click', () => toggleTemplates(contextTemplates));
+    }
+    
+    if (clearContextBtn) {
+        clearContextBtn.addEventListener('click', () => {
+            if (businessContextTextarea) {
+                businessContextTextarea.value = '';
+                saveBusinessContext();
+            }
+        });
+    }
+    
+    if (businessContextTextarea) {
+        businessContextTextarea.addEventListener('blur', saveBusinessContext);
+        businessContextTextarea.addEventListener('input', function() {
+            // 实时保存业务上下文
+            clearTimeout(this.saveTimer);
+            this.saveTimer = setTimeout(saveBusinessContext, 1000);
+        });
+        // 加载保存的上下文
+        loadBusinessContext();
+    }
+    
+    // 模板选项事件
+    const templateOptions = document.querySelectorAll('.template-option');
+    templateOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            const templateText = this.getAttribute('data-template');
+            if (businessContextTextarea) {
+                businessContextTextarea.value = templateText;
+                saveBusinessContext();
+                toggleTemplates(contextTemplates);
+            }
+        });
+    });
+    
+    // 渐进式披露功能
+    initProgressiveDisclosure();
+}
+
+/**
+ * 处理智能填充
+ */
+function handleSmartFill() {
+    const urlInput = document.getElementById('url-input');
+    const businessContextTextarea = document.getElementById('business-context');
+    
+    if (!urlInput || !businessContextTextarea) return;
+    
+    const url = urlInput.value.trim();
+    if (!url) {
+        alert('请先输入网站地址');
+        return;
+    }
+    
+    // 根据URL智能填充业务上下文
+    const context = generateSmartContext(url);
+    businessContextTextarea.value = context;
+    saveBusinessContext();
+}
+
+/**
+ * 根据URL生成智能上下文
+ * @param {string} url - 网站URL
+ * @returns {string} 生成的上下文文本
+ */
+function generateSmartContext(url) {
+    // 从URL中提取域名信息
+    try {
+        const urlObj = new URL(url);
+        const domain = urlObj.hostname.replace('www.', '');
+        
+        // 根据常见域名关键词推断行业
+        const domainKeywords = {
+            'taobao': '电商',
+            'tmall': '电商',
+            'jd': '电商',
+            'amazon': '电商',
+            'ebay': '电商',
+            'alibaba': 'B2B平台',
+            '1688': 'B2B平台',
+            'baidu': '搜索引擎',
+            'google': '搜索引擎',
+            'zhihu': '内容社区',
+            'juejin': '技术社区',
+            'csdn': '技术社区',
+            'weibo': '社交媒体',
+            'douban': '社交网络',
+            'linkedin': '职业社交',
+            'github': '代码托管',
+            'gitlab': '代码托管',
+            'notion': '协作工具',
+            'feishu': '协作工具',
+            'dingtalk': '办公软件',
+            'qq': '社交娱乐',
+            'netflix': '视频平台',
+            'youku': '视频平台',
+            'iqiyi': '视频平台',
+            'bilibili': '视频社区',
+            'xiaohongshu': '生活方式分享',
+            'meituan': '生活服务平台',
+            'ele': '外卖平台',
+            'didi': '出行平台',
+            'airbnb': '住宿平台'
+        };
+        
+        // 默认行业
+        let industry = '网站';
+        for (const [keyword, value] of Object.entries(domainKeywords)) {
+            if (domain.includes(keyword)) {
+                industry = value;
+                break;
+            }
+        }
+        
+        // 生成上下文模板
+        return `${industry}网站：提升用户体验，关键操作是浏览和使用服务，目标用户是相关领域用户`;
+    } catch (e) {
+        console.error('解析URL出错:', e);
+        return '网站：提升用户体验，关键操作是浏览和使用服务，目标用户是网站访问者';
+    }
+}
+
+/**
+ * 切换模板显示状态
+ * @param {HTMLElement} contextTemplates - 模板容器元素
+ */
+function toggleTemplates(contextTemplates) {
+    if (!contextTemplates) {
+        contextTemplates = document.getElementById('context-templates');
+    }
+    if (contextTemplates) {
+        contextTemplates.classList.toggle('hidden');
+    }
+}
+
+/**
+ * 保存业务上下文到localStorage
+ */
+function saveBusinessContext() {
+    const businessContextTextarea = document.getElementById('business-context');
+    if (businessContextTextarea) {
+        const context = businessContextTextarea.value;
+        localStorage.setItem('uxdoctor_business_context', context);
+        
+        // 保存URL与上下文的关联
+        const urlInput = document.getElementById('url-input');
+        if (urlInput && urlInput.value.trim()) {
+            const url = urlInput.value.trim();
+            const urlContextMap = JSON.parse(localStorage.getItem('uxdoctor_url_context_map') || '{}');
+            urlContextMap[url] = context;
+            localStorage.setItem('uxdoctor_url_context_map', JSON.stringify(urlContextMap));
+        }
+    }
+}
+
+/**
+ * 加载业务上下文
+ */
+function loadBusinessContext() {
+    const businessContextTextarea = document.getElementById('business-context');
+    if (!businessContextTextarea) return;
+    
+    // 首先尝试根据当前URL加载相关上下文
+    const urlInput = document.getElementById('url-input');
+    if (urlInput && urlInput.value.trim()) {
+        const url = urlInput.value.trim();
+        const urlContextMap = JSON.parse(localStorage.getItem('uxdoctor_url_context_map') || '{}');
+        if (urlContextMap[url]) {
+            businessContextTextarea.value = urlContextMap[url];
+            return;
+        }
+    }
+    
+    // 如果没有相关URL上下文，则加载上次保存的上下文
+    const savedContext = localStorage.getItem('uxdoctor_business_context');
+    if (savedContext) {
+        businessContextTextarea.value = savedContext;
+    }
+}
+
+/**
+ * 初始化渐进式披露功能
+ */
+function initProgressiveDisclosure() {
+    // 业务上下文字段默认展开，因为我们只有一个可选字段
+    // 如果以后添加更多可选字段，可以在这里实现展开/收起功能
+    console.log('渐进式披露功能初始化完成');
 }
 
 // 当页面显示时检查API配置

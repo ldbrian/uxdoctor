@@ -46,24 +46,41 @@ router.post('/update-config', async (req, res) => {
   try {
     const { openaiKey, deepseekKey, primaryAI } = req.body;
     
-    // 更新AI分析器配置
-    aiAnalyzer.updateConfig({
-      openaiKey: openaiKey || null,
-      deepseekKey: deepseekKey || null,
-      primaryAI: primaryAI || 'deepseek'
-    });
+    // 准备要更新的配置
+    const configUpdate = {};
     
-    // 持久化非敏感配置
-    const success = await configManager.updateConfig({
-      primaryAI: primaryAI || 'deepseek'
-    });
+    // 只有当提供了新值时才更新密钥
+    if (openaiKey !== undefined) {
+      configUpdate.openaiApiKey = openaiKey || null;
+    }
+    
+    if (deepseekKey !== undefined) {
+      configUpdate.deepSeekApiKey = deepseekKey || null;
+    }
+    
+    if (primaryAI) {
+      configUpdate.primaryAI = primaryAI;
+    }
+    
+    // 持久化配置到文件
+    const success = await configManager.updateConfig(configUpdate);
     
     if (success) {
+      // 确保配置已更新后再获取最新的配置
+      const updatedConfig = configManager.getConfig();
+      
+      // 更新AI分析器配置
+      aiAnalyzer.updateConfig({
+        openaiKey: updatedConfig.openaiApiKey,
+        deepseekKey: updatedConfig.deepSeekApiKey,
+        primaryAI: updatedConfig.primaryAI
+      });
+      
       res.json({ 
         success: true, 
         message: '配置更新成功',
         data: {
-          primaryAI: primaryAI || 'deepseek'
+          primaryAI: updatedConfig.primaryAI
         }
       });
     } else {
@@ -82,7 +99,9 @@ router.get('/config', async (req, res) => {
     res.json({
       success: true,
       data: {
-        primaryAI: config.primaryAI
+        primaryAI: config.primaryAI,
+        openaiKey: config.openaiApiKey ? 'configured' : 'not_configured', // 不返回实际密钥值
+        deepseekKey: config.deepSeekApiKey ? 'configured' : 'not_configured' // 不返回实际密钥值
       }
     });
   } catch (error) {
@@ -119,7 +138,7 @@ router.post('/test-config', async (req, res) => {
 // 分析URL
 router.post('/analyze-url', async (req, res) => {
   try {
-    const { url, deviceType, industry, businessGoal, keyAction, targetUsers, additionalInfo } = req.body;
+    const { url, deviceType, businessContext } = req.body;
     
     if (!url) {
       return res.status(400).json({
@@ -128,14 +147,13 @@ router.post('/analyze-url', async (req, res) => {
       });
     }
     
+    // 解析业务上下文信息
+    const businessInfo = businessContext ? { businessContext } : {};
+    
     // 使用分析引擎分析URL
     const result = await analysisEngine.analyzeURL(url, {
       deviceType,
-      industry,
-      businessGoal,
-      keyAction,
-      targetUsers,
-      additionalInfo
+      ...businessInfo
     });
     
     res.json({
@@ -164,20 +182,12 @@ router.post('/analyze-screenshot', upload.single('screenshot'), async (req, res)
     const deviceType = req.body.deviceType || 'auto';
     
     // 获取业务相关信息
-    const industry = req.body.industry || '';
-    const businessGoal = req.body.businessGoal || '';
-    const keyAction = req.body.keyAction || '';
-    const targetUsers = req.body.targetUsers || '';
-    const additionalInfo = req.body.additionalInfo || '';
+    const businessContext = req.body.businessContext || '';
     
     // 使用分析引擎分析截图
     const result = await analysisEngine.analyzeScreenshot(req.file.path, {
       deviceType,
-      industry,
-      businessGoal,
-      keyAction,
-      targetUsers,
-      additionalInfo
+      businessContext
     });
     
     // 删除临时文件

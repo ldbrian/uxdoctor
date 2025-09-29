@@ -142,6 +142,12 @@
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+        
+        .notification.loading {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
     </style>
 </head>
 <body>
@@ -190,28 +196,29 @@
     </div>
 
     <script>
-        // 页面加载时填充已保存的配置
-        document.addEventListener('DOMContentLoaded', function() {
-            // 从localStorage加载配置
-            const openaiKey = localStorage.getItem('openai_api_key');
-            const deepseekKey = localStorage.getItem('deepseek_api_key');
-            const primaryModel = localStorage.getItem('primary_ai') || 'deepseek';
-            
-            if (openaiKey) {
-                document.getElementById('openai-key').value = openaiKey;
-            }
-            
-            if (deepseekKey) {
-                document.getElementById('deepseek-key').value = deepseekKey;
-            }
-            
-            // 设置选中的模型
-            document.querySelectorAll('.model-option').forEach(option => {
-                option.classList.remove('selected');
-                if (option.dataset.model === primaryModel) {
-                    option.classList.add('selected');
+        // 页面加载时从服务器获取配置
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 从服务器加载配置
+            try {
+                const response = await fetch('http://localhost:8080/api/config');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const config = result.data;
+                    console.log('服务器配置:', config);
+                    
+                    // 设置选中的模型
+                    document.querySelectorAll('.model-option').forEach(option => {
+                        option.classList.remove('selected');
+                        if (option.dataset.model === config.primaryAI) {
+                            option.classList.add('selected');
+                        }
+                    });
                 }
-            });
+            } catch (error) {
+                console.error('加载配置失败:', error);
+                showNotification('加载配置失败: ' + error.message, 'error');
+            }
             
             // 模型选择事件
             document.querySelectorAll('.model-option').forEach(option => {
@@ -248,41 +255,62 @@
             });
         });
         
-        // 保存配置到localStorage
-        function saveConfig() {
+        // 保存配置到服务器
+        async function saveConfig() {
             const openaiKey = document.getElementById('openai-key').value;
             const deepseekKey = document.getElementById('deepseek-key').value;
             const primaryModel = document.querySelector('.model-option.selected').dataset.model;
             
-            if (openaiKey) {
-                localStorage.setItem('openai_api_key', openaiKey);
-            } else {
-                localStorage.removeItem('openai_api_key');
+            // 显示加载状态
+            showNotification('正在保存配置...', 'loading');
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/update-config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        openaiKey: openaiKey || null,
+                        deepseekKey: deepseekKey || null,
+                        primaryAI: primaryModel
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('配置已保存！', 'success');
+                } else {
+                    showNotification('配置保存失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('保存配置失败:', error);
+                showNotification('保存配置失败: ' + error.message, 'error');
             }
-            
-            if (deepseekKey) {
-                localStorage.setItem('deepseek_api_key', deepseekKey);
-            } else {
-                localStorage.removeItem('deepseek_api_key');
-            }
-            
-            localStorage.setItem('primary_ai', primaryModel);
-            
-            showNotification('配置已保存！', 'success');
         }
         
         // 测试配置
-        function testConfig() {
-            const openaiKey = document.getElementById('openai-key').value;
-            const deepseekKey = document.getElementById('deepseek-key').value;
-            const primaryModel = document.querySelector('.model-option.selected').dataset.model;
+        async function testConfig() {
+            // 显示加载状态
+            showNotification('正在测试配置...', 'loading');
             
-            if (!openaiKey && !deepseekKey) {
-                showNotification('请至少配置一个API密钥', 'error');
-                return;
+            try {
+                const response = await fetch('http://localhost:8080/api/test-config', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('配置测试成功！', 'success');
+                } else {
+                    showNotification('测试失败: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('测试配置失败:', error);
+                showNotification('测试配置失败: ' + error.message, 'error');
             }
-            
-            showNotification(`配置已设置。主用模型: ${primaryModel === 'openai' ? 'OpenAI' : 'DeepSeek'}`, 'success');
         }
         
         // 显示通知
@@ -291,10 +319,12 @@
             notification.textContent = message;
             notification.className = 'notification ' + type;
             
-            // 3秒后自动隐藏通知
-            setTimeout(() => {
-                notification.className = '';
-            }, 3000);
+            // 成功或错误消息3秒后自动隐藏
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    notification.className = '';
+                }, 3000);
+            }
         }
     </script>
 </body>
