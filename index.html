@@ -66,20 +66,68 @@
                         <input type="url" id="prototype-input" placeholder="https://figma.com/file/...">
                     </div>
                     
+                    <!-- 渐进式披露：业务背景信息 -->
                     <div class="form-group">
-                        <label for="business-context">业务上下文（可选）</label>
-                        <div class="context-controls">
-                            <button type="button" class="btn-small" id="smart-fill-btn">智能填充</button>
-                            <button type="button" class="btn-small" id="load-template-btn">加载模板</button>
-                            <button type="button" class="btn-small" id="clear-context-btn">清空</button>
+                        <button type="button" class="btn-secondary btn-block" id="toggle-business-context">
+                            + 添加业务背景信息（可选，但推荐填写）
+                        </button>
+                    </div>
+                    
+                    <div id="business-context-section" class="hidden">
+                        <!-- 行业领域选择 -->
+                        <div class="form-group">
+                            <label for="industry">行业领域</label>
+                            <select id="industry" class="industry-select">
+                                <option value="">请选择行业</option>
+                                <option value="电商">电商</option>
+                                <option value="金融">金融</option>
+                                <option value="教育">教育</option>
+                                <option value="医疗">医疗</option>
+                                <option value="旅游">旅游</option>
+                                <option value="娱乐">娱乐</option>
+                                <option value="工具">工具</option>
+                                <option value="内容">内容</option>
+                                <option value="社交">社交</option>
+                                <option value="其他">其他</option>
+                            </select>
                         </div>
-                        <textarea id="business-context" rows="5" placeholder="您可以输入行业领域、核心业务目标、关键用户操作、目标用户群体等信息帮助，这会使得分析更加准确"></textarea>
-                        <div class="context-templates hidden" id="context-templates">
-                            <div class="template-option" data-template="电商">电商网站：提升销售额，关键操作是完成购买，目标用户是年轻消费者</div>
-                            <div class="template-option" data-template="SaaS">SaaS平台：获取注册用户，关键操作是注册账号，目标用户是中小企业</div>
-                            <div class="template-option" data-template="内容">内容平台：提高用户活跃度，关键操作是浏览内容，目标用户是大众用户</div>
+                        
+                        <!-- 核心业务目标 -->
+                        <div class="form-group">
+                            <label for="business-goal">核心业务目标</label>
+                            <select id="business-goal" class="business-goal-select">
+                                <option value="">请选择业务目标</option>
+                                <option value="提升销售额">提升销售额</option>
+                                <option value="提高用户注册量">提高用户注册量</option>
+                                <option value="增强用户活跃度">增强用户活跃度</option>
+                                <option value="提高内容消费">提高内容消费</option>
+                                <option value="提升品牌形象">提升品牌形象</option>
+                                <option value="其他">其他</option>
+                            </select>
+                            <input type="text" id="custom-business-goal" placeholder="请输入自定义业务目标" class="hidden">
                         </div>
-                        <small class="form-help">提供业务上下文信息有助于AI更准确地分析业务目标。系统会记住您之前的输入。</small>
+                        
+                        <!-- 关键用户操作 -->
+                        <div class="form-group">
+                            <label for="key-action">关键用户操作</label>
+                            <select id="key-action" class="key-action-select">
+                                <option value="">请选择关键操作</option>
+                                <option value="购买商品">购买商品</option>
+                                <option value="注册账号">注册账号</option>
+                                <option value="提交表单">提交表单</option>
+                                <option value="搜索内容">搜索内容</option>
+                                <option value="观看视频">观看视频</option>
+                                <option value="下载应用">下载应用</option>
+                                <option value="其他">其他</option>
+                            </select>
+                            <input type="text" id="custom-key-action" placeholder="请输入自定义关键操作" class="hidden">
+                        </div>
+                        
+                        <!-- 目标用户群体 -->
+                        <div class="form-group">
+                            <label for="target-users">目标用户群体</label>
+                            <textarea id="target-users" rows="3" placeholder="请描述您的目标用户群体，如年龄、职业、使用习惯等"></textarea>
+                        </div>
                     </div>
 
                     <button type="submit" class="btn-primary btn-block" id="submit-btn">开始分析</button>
@@ -135,6 +183,7 @@
                     <h3>基础版</h3>
                     <div class="price">免费</div>
                     <ul>
+                        <li>每月最多5次分析</li>
                         <li>基本体检报告</li>
                         <li>问题发现</li>
                         <li>基础优化建议</li>
@@ -145,6 +194,7 @@
                     <h3>专业版</h3>
                     <div class="price">¥9.9<span>/次</span></div>
                     <ul>
+                        <li>每月最多50次分析</li>
                         <li>完整体检报告</li>
                         <li>详细问题分析</li>
                         <li>专业优化建议</li>
@@ -192,11 +242,17 @@
             <div class="loading-content">
                 <div class="spinner"></div>
                 <h2>正在分析中...</h2>
-                <p>AI正在深度扫描您的界面，预计需要10-30秒</p>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <p class="progress-text" id="progress-text">准备开始分析...</p>
+                </div>
             </div>
         </div>
     </section>
 
+    <script src="js/user-manager.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

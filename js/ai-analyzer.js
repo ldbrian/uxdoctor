@@ -147,6 +147,22 @@ class AIAnalyzer {
         console.log('使用Playwright抓取页面信息');
         let browser;
         
+        // 只抓取对UX分析关键的元素
+        const KEY_SELECTORS = [
+            // 交互元素
+            'button', 'a', 'input', 'select', 'textarea', '[role="button"]',
+            // 关键内容区域
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
+            'main', 'header', 'footer', 'nav',
+            // 重要组件
+            '.cta', '.btn', '.button', '.form', '.modal', '.dropdown',
+            '.card', '.hero', '.banner', '.notification',
+            // 布局关键点
+            '.container', '.grid', '.flex', '.row', '.col',
+            // 可访问性相关
+            '[aria-label]', '[alt]', '[title]'
+        ];
+
         try {
             // 启动浏览器
             browser = await chromium.launch({ headless: true });
@@ -167,6 +183,50 @@ class AIAnalyzer {
             
             // 获取页面截图
             const screenshotBuffer = await page.screenshot({ fullPage: true });
+            
+            // 提取关键元素信息
+            const extractKeyElements = async (page) => {
+                const elements = await page.$$(KEY_SELECTORS.join(', '));
+                
+                const elementData = [];
+                for (const element of elements.slice(0, 200)) { // 限制数量
+                    const boundingBox = await element.boundingBox();
+                    const isVisible = boundingBox && boundingBox.width > 0 && boundingBox.height > 0;
+                    
+                    if (isVisible) {
+                        const elementInfo = await element.evaluate(el => ({
+                            tag: el.tagName.toLowerCase(),
+                            text: el.textContent?.trim().slice(0, 100), // 限制文本长度
+                            id: el.id,
+                            classes: Array.from(el.classList),
+                            attributes: {
+                                type: el.getAttribute('type'),
+                                placeholder: el.getAttribute('placeholder'),
+                                alt: el.getAttribute('alt'),
+                                'aria-label': el.getAttribute('aria-label'),
+                                role: el.getAttribute('role')
+                            },
+                            computedStyle: {
+                                color: getComputedStyle(el).color,
+                                backgroundColor: getComputedStyle(el).backgroundColor,
+                                fontSize: getComputedStyle(el).fontSize,
+                                fontWeight: getComputedStyle(el).fontWeight,
+                                display: getComputedStyle(el).display
+                            }
+                        }));
+                        
+                        elementData.push({
+                            ...elementInfo,
+                            position: boundingBox
+                        });
+                    }
+                }
+                
+                return elementData;
+            };
+            
+            // 获取关键元素数据
+            const keyElements = await extractKeyElements(page);
             
             // 获取DOM节点结构
             const domNodes = await page.evaluate(() => {
@@ -264,7 +324,8 @@ class AIAnalyzer {
                 computedStyles: computedStyles,
                 accessibilityTree: accessibilityTree,
                 axeResults: axeResults,
-                keyUserFlowData: keyUserFlowData
+                keyUserFlowData: keyUserFlowData,
+                keyElements: keyElements // 添加关键元素数据
             };
         } catch (error) {
             console.error('Playwright抓取页面信息失败:', error.message);
@@ -420,8 +481,54 @@ class AIAnalyzer {
             key_user_flow: pageInfo.keyUserFlowData || null
         };
 
-        // 处理DOM节点，转换为elements数组
-        if (pageInfo.domNodes) {
+        // 处理关键元素数据
+        if (pageInfo.keyElements) {
+            let elements = [];
+            pageInfo.keyElements.forEach((element, index) => {
+                const id = `e${index + 1}`;
+                const elementObj = {
+                    id: id,
+                    type: this.getElementType(element.tag, element.attributes),
+                    text: element.text,
+                    bbox: [
+                        element.position.x,
+                        element.position.y,
+                        element.position.width,
+                        element.position.height
+                    ],
+                    confidence: 0.9,
+                    source: ["dom"],
+                    dom_path: element.id ? `${element.tag}#${element.id}` : element.tag,
+                    css: element.computedStyle,
+                    aria: {
+                        role: element.attributes && element.attributes.role || this.getDefaultRole(element.tag),
+                        label: element.attributes && (element.attributes['aria-label'] || element.attributes.title || '')
+                    },
+                    contrast_ratio: this.estimateContrastRatio(element.tag, element.attributes),
+                    is_clickable: this.isClickable(element.tag, element.attributes)
+                };
+                
+                // 添加CSS选择器
+                let cssSelector = element.tag;
+                if (element.id) {
+                    cssSelector = `#${element.id}`;
+                } else if (element.classes && element.classes.length > 0) {
+                    cssSelector += `.${element.classes.join('.')}`;
+                }
+                elementObj.css_selector = cssSelector;
+                
+                elements.push(elementObj);
+            });
+            
+            // 使用智能采样策略优化元素数量
+            if (elements.length > 100) {
+                console.log(`对${elements.length}个元素进行智能采样，只保留最重要的100个元素`);
+                elements = this.smartElementSampling(elements);
+            }
+            
+            unifiedSchema.elements = elements;
+        } else if (pageInfo.domNodes) {
+            // 如果没有关键元素数据，使用原有的DOM节点处理方式
             const elements = [];
             let elementId = 1;
             
@@ -513,8 +620,14 @@ class AIAnalyzer {
                 pageInfo.domNodes.children.forEach(child => traverseDOM(child));
             }
             
-            // 限制元素数量以减少token使用
-            unifiedSchema.elements = elements.slice(0, 100);
+            // 使用智能采样策略优化元素数量
+            if (elements.length > 100) {
+                console.log(`对${elements.length}个元素进行智能采样，只保留最重要的100个元素`);
+                unifiedSchema.elements = this.smartElementSampling(elements);
+            } else {
+                // 限制元素数量以减少token使用
+                unifiedSchema.elements = elements.slice(0, 100);
+            }
         }
 
         // 如果有关键用户路径数据，添加到schema中
@@ -538,7 +651,7 @@ class AIAnalyzer {
         // 根据标签名映射类型
         const typeMap = {
             'button': 'button',
-            'input': attributes.type === 'submit' || attributes.type === 'button' ? 'button' : 'input',
+            'input': attributes && attributes.type === 'submit' || attributes && attributes.type === 'button' ? 'button' : 'input',
             'textarea': 'input',
             'select': 'input',
             'h1': 'heading',
@@ -706,8 +819,53 @@ class AIAnalyzer {
      */
     isClickable(tagName, attributes) {
         const clickableTags = ['button', 'a', 'input', 'select', 'textarea'];
-        const hasClickHandler = attributes.onclick || attributes.role === 'button';
+        const hasClickHandler = attributes && (attributes.onclick || attributes.role === 'button');
         return clickableTags.includes(tagName) || hasClickHandler;
+    }
+
+    /**
+     * 智能采样策略 - 对于大型页面，不需要分析每个元素
+     * @param {Array} elements - 元素数组
+     * @returns {Array} 采样后的元素数组
+     */
+    smartElementSampling(elements) {
+        // 按重要性排序
+        return elements
+            .sort((a, b) => {
+                // 交互元素优先
+                const aScore = this.getElementImportanceScore(a);
+                const bScore = this.getElementImportanceScore(b);
+                return bScore - aScore;
+            })
+            .slice(0, 100); // 只取最重要的100个元素
+    }
+
+    /**
+     * 获取元素重要性得分
+     * @param {Object} element - 元素对象
+     * @returns {number} 重要性得分
+     */
+    getElementImportanceScore(element) {
+        let score = 0;
+        
+        // 交互元素得分高
+        if (['button', 'a', 'input'].includes(element.tag)) score += 10;
+        if (element.attributes && element.attributes.role === 'button') score += 8;
+        
+        // 标题和重要文本
+        if (element.tag && element.tag.startsWith('h')) score += 6;
+        
+        // 可见性和尺寸
+        if (element.position) {
+            const area = element.position.width * element.position.height;
+            if (area > 10000) score += 5; // 大元素更重要
+            if (element.position.y < 600) score += 3; // 首屏元素更重要
+        }
+        
+        // 有文字内容的元素
+        if (element.text && element.text.length > 5) score += 2;
+        
+        return score;
     }
 
     /**
@@ -1030,6 +1188,11 @@ class AIAnalyzer {
             // 规则引擎先运行，生成原始问题列表
             let rawIssues = [];
             if (unifiedData) {
+                // 使用本地规则引擎进行第一层分析（零AI成本）
+                const localIssues = rulesEngine.localRuleAnalysis(unifiedData.elements);
+                console.log(`本地规则引擎发现 ${localIssues.length} 个问题`);
+                
+                // 执行原有规则检查
                 rawIssues = rulesEngine.executeRules(unifiedData);
             }
             
@@ -1129,47 +1292,27 @@ ${JSON.stringify(limitedRawIssues, null, 2)}
                     // 转换数据结构以匹配报告页面期望的格式
                     // 使用AI返回的实际结果而不是硬编码的默认值
                     return {
-                        overallScore: result.overallScore || 85,
+                        overallScore: result.overallScore,
                         dimensions: {
                             businessGoalAlignment: {
-                                assessment: result.dimensions?.businessGoalAlignment?.assessment || "页面整体设计与促进用户转化的业务目标基本一致，但在关键操作路径上存在一些体验障碍需要优化。"
+                                assessment: result.dimensions?.businessGoalAlignment?.assessment
                             },
                             conversionPath: {
-                                issues: result.dimensions?.conversionPath?.issues || [
-                                    {
-                                        description: "关键操作按钮颜色对比度不足且位置不明显",
-                                        businessImpact: "这个问题可能导致用户无法快速找到核心操作入口，影响了所有用户，特别是视障用户的可访问性。"
-                                    }
-                                ]
+                                issues: result.dimensions?.conversionPath?.issues
                             },
                             experienceIssues: {
                                 highImpact: {
-                                    issues: result.dimensions?.experienceIssues?.highImpact?.issues || [
-                                        {
-                                            description: "关键操作按钮颜色对比度不足且位置不明显",
-                                            businessImpact: "这个问题可能导致用户无法快速找到核心操作入口，影响了所有用户，特别是视障用户的可访问性。"
-                                        }
-                                    ]
+                                    issues: result.dimensions?.experienceIssues?.highImpact?.issues
                                 },
                                 mediumImpact: {
-                                    issues: result.dimensions?.experienceIssues?.mediumImpact?.issues || [
-                                        {
-                                            description: "页面文案表达不够清晰，存在歧义",
-                                            businessImpact: "用户理解成本增加，可能影响用户继续浏览的意愿。"
-                                        }
-                                    ]
+                                    issues: result.dimensions?.experienceIssues?.mediumImpact?.issues
                                 },
                                 lowImpact: {
-                                    issues: result.dimensions?.experienceIssues?.lowImpact?.issues || [
-                                        {
-                                            description: "页面配色方案与行业最佳实践略有偏差",
-                                            businessImpact: "对用户体验有一定影响，但不会显著影响业务指标。"
-                                        }
-                                    ]
+                                    issues: result.dimensions?.experienceIssues?.lowImpact?.issues
                                 }
                             }
                         },
-                        summary: result.summary || "界面整体设计简洁清晰，但在关键操作路径上存在一些可能影响用户转化的体验问题，建议优先优化高影响问题。",
+                        summary: result.summary,
                         unifiedData: unifiedData,
                         rawIssues: rawIssues,
                         aiIssues: sanityCheckedIssues || result
@@ -1305,21 +1448,16 @@ Please pay particular attention to user experience problems related to that oper
                     // 转换数据结构以匹配报告页面期望的格式
                     // 使用AI返回的实际结果而不是硬编码的默认值
                     return {
-                        overallScore: result.overallScore || 85,
+                        overallScore: result.overallScore,
                         dimensions: {
                             businessGoalAlignment: {
-                                assessment: result.dimensions?.businessGoalAlignment?.assessment || "页面整体设计与促进用户转化的业务目标基本一致，但在关键操作路径上存在一些体验障碍需要优化。"
+                                assessment: result.dimensions?.businessGoalAlignment?.assessment
                             },
                             conversionPath: {
                                 issues: result.dimensions?.conversionPath?.issues?.map(issue => ({
                                     description: issue.description || issue,
                                     businessImpact: issue.businessImpact || "该问题可能对业务指标产生影响"
-                                })) || [
-                                    {
-                                        description: "关键操作按钮颜色对比度不足且位置不明显",
-                                        businessImpact: "这个问题可能导致用户无法快速找到核心操作入口，影响了所有用户，特别是视障用户的可访问性。"
-                                    }
-                                ]
+                                }))
                             },
                             experienceIssues: {
                                 highImpact: {
@@ -1327,40 +1465,25 @@ Please pay particular attention to user experience problems related to that oper
                                         description: issue.description || issue,
                                         businessImpact: issue.businessImpact || "该问题可能对业务指标产生影响",
                                         suggestion: issue.suggestion
-                                    })) || [
-                                        {
-                                            description: "关键操作按钮颜色对比度不足且位置不明显",
-                                            businessImpact: "这个问题可能导致用户无法快速找到核心操作入口，影响了所有用户，特别是视障用户的可访问性。"
-                                        }
-                                    ]
+                                    }))
                                 },
                                 mediumImpact: {
                                     issues: result.dimensions?.experienceIssues?.mediumImpact?.issues?.map(issue => ({
                                         description: issue.description || issue,
                                         businessImpact: issue.businessImpact || "该问题可能对业务指标产生影响",
                                         suggestion: issue.suggestion
-                                    })) || [
-                                        {
-                                            description: "页面文案表达不够清晰，存在歧义",
-                                            businessImpact: "用户理解成本增加，可能影响用户继续浏览的意愿。"
-                                        }
-                                    ]
+                                    }))
                                 },
                                 lowImpact: {
                                     issues: result.dimensions?.experienceIssues?.lowImpact?.issues?.map(issue => ({
                                         description: issue.description || issue,
                                         businessImpact: issue.businessImpact || "该问题可能对业务指标产生影响",
                                         suggestion: issue.suggestion
-                                    })) || [
-                                        {
-                                            description: "页面配色方案与行业最佳实践略有偏差",
-                                            businessImpact: "对用户体验有一定影响，但不会显著影响业务指标。"
-                                        }
-                                    ]
+                                    }))
                                 }
                             }
                         },
-                        summary: result.summary || "界面整体设计简洁清晰，但在关键操作路径上存在一些可能影响用户转化的体验问题，建议优先优化高影响问题。",
+                        summary: result.summary,
                         unifiedData: unifiedData,
                         rawIssues: rawIssues,
                         aiIssues: sanityCheckedIssues || result
@@ -1562,14 +1685,6 @@ Please pay particular attention to user experience problems related to that oper
         const sentences = text.split(/[.。！!？?]/).filter(s => s.trim().length > 0);
         const uniqueSentences = new Set(sentences.map(s => s.trim()));
         return uniqueSentences.size < sentences.length * 0.8; // 如果唯一句子数少于总句子数的80%，认为有重复
-    }
-}
-
-// 导出AI分析器
-const aiAnalyzer = new AIAnalyzer();
-
-module.exports = { AIAnalyzer, aiAnalyzer };
-
     }
 
     /**

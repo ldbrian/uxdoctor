@@ -78,18 +78,35 @@ document.addEventListener('DOMContentLoaded', function() {
         // 5. 总结评价
         const summarySection = createSummarySection(result.summary);
         
+        // 6. 下一步行动
+        const nextActionsSection = createNextActionsSection();
+        
         // 将各部分添加到报告内容区域
         reportContent.appendChild(overallScoreSection);
         reportContent.appendChild(businessGoalSection);
         reportContent.appendChild(conversionPathSection);
         reportContent.appendChild(experienceIssuesSection);
         reportContent.appendChild(summarySection);
+        reportContent.appendChild(nextActionsSection);
         
         // 绑定解锁按钮事件
         const unlockButtons = document.querySelectorAll('.unlock-btn');
         unlockButtons.forEach(button => {
             button.addEventListener('click', function() {
-                alert('支付功能将在后续版本中实现');
+                // 检查用户是否可以升级
+                const userManager = window.userManager || (typeof module !== 'undefined' ? require('./user-manager.js').userManager : null);
+                const userId = 'default_user'; // 在实际应用中应该从认证系统获取
+                
+                userManager.canUpgrade(userId).then(canUpgrade => {
+                    if (canUpgrade) {
+                        alert('支付功能将在后续版本中实现');
+                    } else {
+                        alert('您已经是最高级别用户');
+                    }
+                }).catch(error => {
+                    console.error('检查升级权限时出错:', error);
+                    alert('支付功能将在后续版本中实现');
+                });
             });
         });
         
@@ -128,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h2>业务目标一致性评估</h2>
             </div>
             <div class="subsection">
-                <p>${businessGoalData.assessment || '暂无评估'}</p>
+                <p>${(businessGoalData && businessGoalData.assessment) || '暂无评估'}</p>
             </div>
         `;
         
@@ -144,11 +161,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 生成问题列表HTML
         let issuesHTML = '<li>无发现的问题</li>';
-        if (conversionPathData.issues && conversionPathData.issues.length > 0) {
+        if (conversionPathData && conversionPathData.issues && conversionPathData.issues.length > 0) {
             issuesHTML = conversionPathData.issues.map(issue => `
                 <li>
-                    <div class="issue-description">${issue.description}</div>
-                    <div class="business-impact">业务影响：${issue.businessImpact}</div>
+                    <div class="issue-description">${issue.description || '无描述'}</div>
+                    <div class="business-impact">业务影响：${issue.businessImpact || '无影响说明'}</div>
+                    ${issue.suggestion ? `<div class="suggestion">具体建议：${issue.suggestion}</div>` : ''}
                 </li>
             `).join('');
         }
@@ -177,11 +195,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 生成高影响问题HTML
         let highImpactHTML = '<li>无高影响问题</li>';
-        if (experienceIssuesData.highImpact.issues && experienceIssuesData.highImpact.issues.length > 0) {
+        if (experienceIssuesData && experienceIssuesData.highImpact && experienceIssuesData.highImpact.issues && experienceIssuesData.highImpact.issues.length > 0) {
             highImpactHTML = experienceIssuesData.highImpact.issues.map(issue => `
                 <li>
-                    <div class="issue-description">${issue.description}</div>
-                    <div class="business-impact">业务影响：${issue.businessImpact}</div>
+                    <div class="issue-description">${issue.description || '无描述'}</div>
+                    <div class="business-impact">业务影响：${issue.businessImpact || '无影响说明'}</div>
                     ${issue.suggestion ? `<div class="suggestion">具体建议：${issue.suggestion}</div>` : ''}
                 </li>
             `).join('');
@@ -189,11 +207,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 生成中影响问题HTML
         let mediumImpactHTML = '<li>无中影响问题</li>';
-        if (experienceIssuesData.mediumImpact.issues && experienceIssuesData.mediumImpact.issues.length > 0) {
+        if (experienceIssuesData && experienceIssuesData.mediumImpact && experienceIssuesData.mediumImpact.issues && experienceIssuesData.mediumImpact.issues.length > 0) {
             mediumImpactHTML = experienceIssuesData.mediumImpact.issues.map(issue => `
                 <li>
-                    <div class="issue-description">${issue.description}</div>
-                    <div class="business-impact">业务影响：${issue.businessImpact}</div>
+                    <div class="issue-description">${issue.description || '无描述'}</div>
+                    <div class="business-impact">业务影响：${issue.businessImpact || '无影响说明'}</div>
                     ${issue.suggestion ? `<div class="suggestion">具体建议：${issue.suggestion}</div>` : ''}
                 </li>
             `).join('');
@@ -201,11 +219,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 生成低影响问题HTML
         let lowImpactHTML = '<li>无低影响问题</li>';
-        if (experienceIssuesData.lowImpact.issues && experienceIssuesData.lowImpact.issues.length > 0) {
+        if (experienceIssuesData && experienceIssuesData.lowImpact && experienceIssuesData.lowImpact.issues && experienceIssuesData.lowImpact.issues.length > 0) {
             lowImpactHTML = experienceIssuesData.lowImpact.issues.map(issue => `
                 <li>
-                    <div class="issue-description">${issue.description}</div>
-                    <div class="business-impact">业务影响：${issue.businessImpact}</div>
+                    <div class="issue-description">${issue.description || '无描述'}</div>
+                    <div class="business-impact">业务影响：${issue.businessImpact || '无影响说明'}</div>
                     ${issue.suggestion ? `<div class="suggestion">具体建议：${issue.suggestion}</div>` : ''}
                 </li>
             `).join('');
@@ -262,6 +280,85 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p class="summary-text">${summaryText || '暂无总结'}</p>
             </div>
         `;
+        
+        return section;
+    }
+    
+    /**
+     * 创建下一步行动部分
+     */
+    function createNextActionsSection() {
+        const section = document.createElement('div');
+        section.className = 'report-section next-actions-section';
+        
+        section.innerHTML = `
+            <div class="section-header">
+                <h2>下一步行动</h2>
+            </div>
+            <div class="next-actions">
+                <button class="next-action-btn upgrade">
+                    <span>🔓</span> 解锁完整报告（¥9.9）
+                </button>
+                <button class="next-action-btn consult">
+                    <span>💬</span> 预约专家咨询
+                </button>
+                <button class="next-action-btn share">
+                    <span>📤</span> 分享报告
+                </button>
+            </div>
+        `;
+        
+        // 绑定事件
+        const upgradeBtn = section.querySelector('.upgrade');
+        const consultBtn = section.querySelector('.consult');
+        const shareBtn = section.querySelector('.share');
+        
+        if (upgradeBtn) {
+            upgradeBtn.addEventListener('click', function() {
+                // 检查用户是否可以升级
+                const userManager = window.userManager || (typeof module !== 'undefined' ? require('./user-manager.js').userManager : null);
+                const userId = 'default_user'; // 在实际应用中应该从认证系统获取
+                
+                userManager.canUpgrade(userId).then(canUpgrade => {
+                    if (canUpgrade) {
+                        alert('支付功能将在后续版本中实现');
+                    } else {
+                        alert('您已经是最高级别用户');
+                    }
+                }).catch(error => {
+                    console.error('检查升级权限时出错:', error);
+                    alert('支付功能将在后续版本中实现');
+                });
+            });
+        }
+        
+        if (consultBtn) {
+            consultBtn.addEventListener('click', function() {
+                alert('预约咨询功能将在后续版本中实现');
+            });
+        }
+        
+        if (shareBtn) {
+            shareBtn.addEventListener('click', function() {
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'UX体验分析报告',
+                        text: '我刚刚使用UXDoctor进行了用户体验分析，发现了一些可以优化的问题。',
+                        url: window.location.href
+                    }).catch(error => console.log('分享失败:', error));
+                } else {
+                    // 复制链接到剪贴板
+                    navigator.clipboard.writeText(window.location.href)
+                        .then(() => {
+                            alert('报告链接已复制到剪贴板');
+                        })
+                        .catch(error => {
+                            console.error('复制失败:', error);
+                            alert('复制失败，请手动复制链接');
+                        });
+                }
+            });
+        }
         
         return section;
     }

@@ -3,10 +3,23 @@ console.log('JavaScript文件开始加载');
 // 定义全局变量
 let urlInput, screenshotInput, prototypeInput, uploadArea, uxForm, submitBtn;
 let loadingSection, resultsSection, historyList, deviceTypeInputs, uploadSection;
+// 新增业务相关变量
+let industrySelect, businessGoalSelect, customBusinessGoalInput, keyActionSelect, customKeyActionInput, targetUsersTextarea;
+// 新增界面元素
+let toggleBusinessContextBtn, businessContextSection;
+// 进度条元素
+let progressFill, progressText;
+// 用户管理器引用
+let userManagerRef;
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('页面加载完成');
+    
+    // 获取用户管理器实例
+    userManagerRef = window.userManager;
+    // 为保持向后兼容性，创建别名
+    const userManager = userManagerRef;
     
     // 初始化DOM元素引用
     urlInput = document.getElementById('url-input');
@@ -21,6 +34,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     deviceTypeInputs = document.querySelectorAll('input[name="device-type"]');
     uploadSection = document.querySelector('.upload-section');
     
+    // 初始化业务相关DOM元素引用
+    industrySelect = document.getElementById('industry');
+    businessGoalSelect = document.getElementById('business-goal');
+    customBusinessGoalInput = document.getElementById('custom-business-goal');
+    keyActionSelect = document.getElementById('key-action');
+    customKeyActionInput = document.getElementById('custom-key-action');
+    targetUsersTextarea = document.getElementById('target-users');
+    
+    // 初始化界面元素引用
+    toggleBusinessContextBtn = document.getElementById('toggle-business-context');
+    businessContextSection = document.getElementById('business-context-section');
+    
+    // 初始化进度条元素引用
+    progressFill = document.getElementById('progress-fill');
+    progressText = document.getElementById('progress-text');
+    
     // 初始化配置
     await initConfig();
     
@@ -32,6 +61,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // 初始化业务上下文功能
     initBusinessContextFeatures();
+    
+    // 检查用户配额
+    checkUserQuota();
 });
 
 /**
@@ -51,6 +83,11 @@ async function initConfig() {
             
             // 更新UI显示当前配置
             updateConfigUI(config);
+            
+            // 同时更新配置页面的表单显示
+            if (window.updateConfigForm) {
+                updateConfigForm(config);
+            }
         } else {
             console.error('配置初始化失败:', result.error);
         }
@@ -112,6 +149,29 @@ function updateConfigUI(config) {
 }
 
 /**
+ * 检查用户配额
+ */
+async function checkUserQuota() {
+    try {
+        // 使用默认用户ID（在实际应用中应该从认证系统获取）
+        const userId = 'default_user';
+        const quota = await userManager.checkQuota(userId);
+        
+        console.log('用户配额信息:', quota);
+        
+        // 如果是免费用户且配额已用完，显示提示
+        if (quota.tier === 'free' && quota.remaining === 0) {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '免费配额已用完，请升级';
+            }
+        }
+    } catch (error) {
+        console.error('检查用户配额时出错:', error);
+    }
+}
+
+/**
  * 绑定事件监听器
  */
 function bindEventListeners() {
@@ -163,6 +223,40 @@ function bindEventListeners() {
             loadBusinessContext();
         });
     }
+    
+    // 业务目标选择事件
+    if (businessGoalSelect) {
+        businessGoalSelect.addEventListener('change', function() {
+            if (this.value === '其他') {
+                customBusinessGoalInput.classList.remove('hidden');
+            } else {
+                customBusinessGoalInput.classList.add('hidden');
+            }
+        });
+    }
+    
+    // 关键操作选择事件
+    if (keyActionSelect) {
+        keyActionSelect.addEventListener('change', function() {
+            if (this.value === '其他') {
+                customKeyActionInput.classList.remove('hidden');
+            } else {
+                customKeyActionInput.classList.add('hidden');
+            }
+        });
+    }
+    
+    // 渐进式披露事件
+    if (toggleBusinessContextBtn) {
+        toggleBusinessContextBtn.addEventListener('click', function() {
+            businessContextSection.classList.toggle('hidden');
+            if (businessContextSection.classList.contains('hidden')) {
+                this.textContent = '+ 添加业务背景信息（可选，但推荐填写）';
+            } else {
+                this.textContent = '- 收起业务背景信息';
+            }
+        });
+    }
 }
 
 /**
@@ -171,25 +265,65 @@ function bindEventListeners() {
 async function handleFormSubmit() {
     console.log('表单提交事件触发');
     
+    // 检查用户是否有权限执行分析
+    const userId = 'default_user'; // 在实际应用中应该从认证系统获取
+    const canAnalyze = await userManager.canPerformAnalysis(userId);
+    
+    if (!canAnalyze.allowed) {
+        showError(`分析次数已达上限: ${canAnalyze.reason}`);
+        return;
+    }
+    
     // 获取输入数据
     const url = urlInput ? urlInput.value : '';
     const screenshot = screenshotInput ? screenshotInput.files[0] : null;
     const deviceType = document.querySelector('input[name="device-type"]:checked')?.value || 'auto';
     
-    console.log('输入数据:', { url, screenshot, deviceType });
+    // 获取业务相关信息
+    const industry = industrySelect ? industrySelect.value : '';
+    const businessGoal = businessGoalSelect && businessGoalSelect.value === '其他' 
+        ? customBusinessGoalInput.value 
+        : businessGoalSelect ? businessGoalSelect.value : '';
+    const keyAction = keyActionSelect && keyActionSelect.value === '其他' 
+        ? customKeyActionInput.value 
+        : keyActionSelect ? keyActionSelect.value : '';
+    const targetUsers = targetUsersTextarea ? targetUsersTextarea.value : '';
+    
+    // 构建业务上下文
+    const businessContext = {
+        industry: industry,
+        businessGoal: businessGoal,
+        keyAction: keyAction,
+        targetUsers: targetUsers
+    };
+    
+    // 构建业务上下文字符串
+    const businessContextString = `行业：${industry}，业务目标：${businessGoal}，关键操作：${keyAction}，目标用户：${targetUsers}`;
+    
+    console.log('输入数据:', { url, screenshot, deviceType, businessContext });
     
     // 显示加载状态
     if (uploadSection) uploadSection.classList.add('hidden');
     if (loadingSection) loadingSection.classList.remove('hidden');
     
+    // 初始化进度条
+    updateProgress(0, '准备开始分析...');
+    
     try {
+        // 增加用户使用次数
+        await userManager.incrementUsage(userId);
+        
         let result;
         if (screenshot) {
             console.log('处理截图上传');
+            // 更新进度
+            updateProgress(20, '正在上传截图...');
+            
             // 处理截图上传
             const formData = new FormData();
             formData.append('screenshot', screenshot);
             formData.append('deviceType', deviceType);
+            formData.append('businessContext', businessContextString);
             
             const response = await fetch('http://localhost:8080/api/analyze-screenshot', {
                 method: 'POST',
@@ -197,6 +331,9 @@ async function handleFormSubmit() {
             });
             
             console.log('截图上传响应:', response);
+            
+            // 更新进度
+            updateProgress(40, '正在分析截图...');
             
             const data = await response.json();
             console.log('截图上传返回数据:', data);
@@ -207,117 +344,9 @@ async function handleFormSubmit() {
             result = data.data;
         } else if (url) {
             console.log('处理URL分析');
-            // 处理URL分析
-            const response = await fetch('http://localhost:8080/api/analyze-url', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ url, deviceType })
-            });
+            // 更新进度
+            updateProgress(20, '正在访问网站...');
             
-            console.log('URL分析响应:', response);
-            
-            const data = await response.json();
-            console.log('URL分析返回数据:', data);
-            
-            if (!data.success) {
-                throw new Error(data.error || '分析失败');
-            }
-            result = data.data;
-        } else {
-            throw new Error('请提供URL或上传截图');
-        }
-        
-        console.log('分析结果:', result);
-        
-        // 保存到历史记录
-        if (screenshot) {
-            saveToHistory(result, `截图: ${screenshot.name}`, deviceType);
-        } else if (url) {
-            saveToHistory(result, url, deviceType);
-        }
-        
-        // 生成报告
-        generateReport(result);
-        if (loadingSection) loadingSection.classList.add('hidden');
-    } catch (error) {
-        console.error('分析出错:', error);
-        showError('分析过程中发生错误: ' + error.message);
-        if (loadingSection) loadingSection.classList.add('hidden');
-        if (uploadSection) uploadSection.classList.remove('hidden');
-    }
-}
-
-/**
- * 处理表单提交
- * @param {Event} e - 事件对象
- */
-async function handleSubmit(e) {
-    e.preventDefault();
-    
-    // 获取表单数据
-    const url = urlInput.value.trim();
-    const screenshot = screenshotInput.files[0];
-    const prototypeUrl = prototypeInput.value.trim();
-    
-    // 获取业务相关信息
-    const businessContext = document.getElementById('business-context').value.trim();
-    
-    // 检查输入
-    if (!url && !screenshot) {
-        showError('请提供网站URL或上传截图');
-        return;
-    }
-    
-    // 检查是否提供了业务相关信息，并给出提示
-    if (!businessContext) {
-        const confirmSubmit = confirm('您未提供业务相关信息（行业、业务目标等），这可能导致分析报告准确性下降。是否继续提交？');
-        if (!confirmSubmit) {
-            return;
-        }
-    }
-    
-    // 获取设备类型
-    let deviceType = 'auto';
-    deviceTypeInputs.forEach(input => {
-        if (input.checked) {
-            deviceType = input.value;
-        }
-    });
-    
-    // 显示加载状态
-    if (uploadSection) uploadSection.classList.add('hidden');
-    if (loadingSection) loadingSection.classList.remove('hidden');
-    
-    try {
-        let result;
-        
-        // 根据输入类型调用相应的分析API
-        if (screenshot) {
-            // 处理截图上传
-            const formData = new FormData();
-            formData.append('screenshot', screenshot);
-            formData.append('deviceType', deviceType);
-            
-            // 添加业务相关信息到表单数据
-            if (businessContext) formData.append('businessContext', businessContext);
-            
-            const response = await fetch('http://localhost:8080/api/analyze-screenshot', {
-                method: 'POST',
-                body: formData
-            });
-            
-            console.log('截图分析响应:', response);
-            
-            const data = await response.json();
-            console.log('截图分析返回数据:', data);
-            
-            if (!data.success) {
-                throw new Error(data.error || '分析失败');
-            }
-            result = data.data;
-        } else if (url) {
             // 处理URL分析
             const response = await fetch('http://localhost:8080/api/analyze-url', {
                 method: 'POST',
@@ -327,11 +356,14 @@ async function handleSubmit(e) {
                 body: JSON.stringify({ 
                     url, 
                     deviceType,
-                    businessContext
+                    businessContext: businessContextString
                 })
             });
             
             console.log('URL分析响应:', response);
+            
+            // 更新进度
+            updateProgress(40, '正在分析网站...');
             
             const data = await response.json();
             console.log('URL分析返回数据:', data);
@@ -344,6 +376,8 @@ async function handleSubmit(e) {
             throw new Error('请提供URL或上传截图');
         }
         
+        // 更新进度
+        updateProgress(80, '正在生成报告...');
         console.log('分析结果:', result);
         
         // 保存到历史记录
@@ -353,15 +387,34 @@ async function handleSubmit(e) {
             saveToHistory(result, url, deviceType);
         }
         
+        // 更新进度
+        updateProgress(100, '分析完成，正在跳转...');
+        
         // 生成报告
         generateReport(result);
         if (loadingSection) loadingSection.classList.add('hidden');
-
+        
+        // 重新检查用户配额
+        checkUserQuota();
     } catch (error) {
         console.error('分析出错:', error);
         showError('分析过程中发生错误: ' + error.message);
         if (loadingSection) loadingSection.classList.add('hidden');
         if (uploadSection) uploadSection.classList.remove('hidden');
+    }
+}
+
+/**
+ * 更新进度条
+ * @param {number} percent - 进度百分比
+ * @param {string} text - 进度文本
+ */
+function updateProgress(percent, text) {
+    if (progressFill) {
+        progressFill.style.width = `${percent}%`;
+    }
+    if (progressText) {
+        progressText.textContent = text;
     }
 }
 
@@ -430,8 +483,8 @@ async function handleConfigSubmit(e) {
             // 更新UI显示
             updateConfigUI({ 
                 primaryAI: primaryModel,
-                openaiKey: openaiKey ? 'configured' : 'not_configured',
-                deepseekKey: deepseekKey ? 'configured' : 'not_configured'
+                openaiKey: openaiKey ? 'configured' : (document.getElementById('openai-key-display')?.textContent === '已配置' ? 'configured' : 'not_configured'),
+                deepseekKey: deepseekKey ? 'configured' : (document.getElementById('deepseek-key-display')?.textContent === '已配置' ? 'configured' : 'not_configured')
             });
         } else {
             showNotification('配置保存失败: ' + result.error, 'error');

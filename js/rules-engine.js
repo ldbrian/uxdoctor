@@ -48,6 +48,165 @@ class RulesEngine {
     }
 
     /**
+     * 在调用AI前，先用本地规则检测明显问题
+     * @param {Array} elements - 元素数组
+     * @returns {Array} 问题列表
+     */
+    localRuleAnalysis(elements) {
+        // 先进行智能采样
+        const sampledElements = this.smartElementSampling(elements);
+        
+        const issues = [];
+        
+        sampledElements.forEach(element => {
+            // 检查颜色对比度
+            if (element.css && element.css.color && element.css.backgroundColor) {
+                const contrast = this.calculateContrastRatio(
+                    element.css.color, 
+                    element.css.backgroundColor
+                );
+                if (contrast < 4.5) {
+                    issues.push({
+                        type: 'accessibility',
+                        element: element,
+                        issue: '颜色对比度不足',
+                        suggestion: '调整文字或背景颜色以满足WCAG标准'
+                    });
+                }
+            }
+            
+            // 检查图片alt文本
+            if (element.type === 'image' && (!element.aria || !element.aria.label)) {
+                issues.push({
+                    type: 'accessibility', 
+                    element: element,
+                    issue: '图片缺少alt文本',
+                    suggestion: '为图片添加描述性alt文本'
+                });
+            }
+        });
+        
+        return issues;
+    }
+
+    /**
+     * 智能采样策略 - 对于大型页面，不需要分析每个元素
+     * @param {Array} elements - 元素数组
+     * @returns {Array} 采样后的元素数组
+     */
+    smartElementSampling(elements) {
+        // 按重要性排序
+        return elements
+            .sort((a, b) => {
+                // 交互元素优先
+                const aScore = this.getElementImportanceScore(a);
+                const bScore = this.getElementImportanceScore(b);
+                return bScore - aScore;
+            })
+            .slice(0, 100); // 只取最重要的100个元素
+    }
+
+    /**
+     * 获取元素重要性得分
+     * @param {Object} element - 元素对象
+     * @returns {number} 重要性得分
+     */
+    getElementImportanceScore(element) {
+        let score = 0;
+        
+        // 交互元素得分高
+        if (['button', 'a', 'input'].includes(element.tag)) score += 10;
+        if (element.attributes && element.attributes.role === 'button') score += 8;
+        
+        // 标题和重要文本
+        if (element.tag && element.tag.startsWith('h')) score += 6;
+        
+        // 可见性和尺寸
+        if (element.position) {
+            const area = element.position.width * element.position.height;
+            if (area > 10000) score += 5; // 大元素更重要
+            if (element.position.y < 600) score += 3; // 首屏元素更重要
+        }
+        
+        // 有文字内容的元素
+        if (element.text && element.text.length > 5) score += 2;
+        
+        return score;
+    }
+
+    /**
+     * 计算颜色对比度比率
+     * @param {string} color1 - 前景色
+     * @param {string} color2 - 背景色
+     * @returns {number} 对比度比率
+     */
+    calculateContrastRatio(color1, color2) {
+        // 将颜色转换为相对亮度
+        const luminance1 = this.getRelativeLuminance(this.parseColor(color1));
+        const luminance2 = this.getRelativeLuminance(this.parseColor(color2));
+        
+        // 计算对比度比率
+        const lighter = Math.max(luminance1, luminance2);
+        const darker = Math.min(luminance1, luminance2);
+        
+        return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    /**
+     * 解析颜色值
+     * @param {string} color - 颜色字符串
+     * @returns {Object} 包含r,g,b值的对象
+     */
+    parseColor(color) {
+        let r, g, b;
+        
+        // 处理rgb()格式
+        if (color.startsWith('rgb(')) {
+            const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (match) {
+                r = parseInt(match[1]);
+                g = parseInt(match[2]);
+                b = parseInt(match[3]);
+            }
+        } 
+        // 处理十六进制格式
+        else if (color.startsWith('#')) {
+            const hex = color.slice(1);
+            if (hex.length === 3) {
+                r = parseInt(hex[0] + hex[0], 16);
+                g = parseInt(hex[1] + hex[1], 16);
+                b = parseInt(hex[2] + hex[2], 16);
+            } else if (hex.length === 6) {
+                r = parseInt(hex.slice(0, 2), 16);
+                g = parseInt(hex.slice(2, 4), 16);
+                b = parseInt(hex.slice(4, 6), 16);
+            }
+        }
+        
+        return { r: r || 0, g: g || 0, b: b || 0 };
+    }
+
+    /**
+     * 计算相对亮度
+     * @param {Object} rgb - 包含r,g,b值的对象
+     * @returns {number} 相对亮度值
+     */
+    getRelativeLuminance(rgb) {
+        // 将RGB值转换为0-1范围
+        const r = rgb.r / 255;
+        const g = rgb.g / 255;
+        const b = rgb.b / 255;
+        
+        // 应用sRGB到线性RGB的转换
+        const R = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+        const G = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+        const B = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+        
+        // 计算相对亮度
+        return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+    }
+
+    /**
      * 检查对比度比率
      * @param {Object} element - UI元素
      * @param {Array} issues - 问题列表

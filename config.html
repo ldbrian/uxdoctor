@@ -214,6 +214,15 @@
                             option.classList.add('selected');
                         }
                     });
+                    
+                    // 设置API密钥字段的显示状态（不显示实际密钥值）
+                    if (config.openaiKey === 'configured') {
+                        document.getElementById('openai-key').placeholder = '已配置（点击可更新）';
+                    }
+                    
+                    if (config.deepseekKey === 'configured') {
+                        document.getElementById('deepseek-key').placeholder = '已配置（点击可更新）';
+                    }
                 }
             } catch (error) {
                 console.error('加载配置失败:', error);
@@ -281,6 +290,17 @@
                 
                 if (result.success) {
                     showNotification('配置已保存！', 'success');
+                    
+                    // 更新UI显示
+                    if (openaiKey) {
+                        document.getElementById('openai-key').placeholder = '已配置（点击可更新）';
+                        document.getElementById('openai-key').value = '';
+                    }
+                    
+                    if (deepseekKey) {
+                        document.getElementById('deepseek-key').placeholder = '已配置（点击可更新）';
+                        document.getElementById('deepseek-key').value = '';
+                    }
                 } else {
                     showNotification('配置保存失败: ' + result.error, 'error');
                 }
@@ -326,6 +346,33 @@
                 }, 3000);
             }
         }
+        
+        // 更新配置表单显示
+        function updateConfigForm(config) {
+            // 设置选中的模型
+            document.querySelectorAll('.model-option').forEach(option => {
+                option.classList.remove('selected');
+                if (option.dataset.model === config.primaryAI) {
+                    option.classList.add('selected');
+                }
+            });
+            
+            // 设置API密钥字段的显示状态
+            if (config.openaiKey === 'configured') {
+                document.getElementById('openai-key').placeholder = '已配置（点击可更新）';
+            } else {
+                document.getElementById('openai-key').placeholder = 'sk-... (可选)';
+            }
+            
+            if (config.deepseekKey === 'configured') {
+                document.getElementById('deepseek-key').placeholder = '已配置（点击可更新）';
+            } else {
+                document.getElementById('deepseek-key').placeholder = 'sk-... (可选)';
+            }
+        }
+        
+        // 暴露函数供外部调用
+        window.updateConfigForm = updateConfigForm;
     </script>
 </body>
 </html>
