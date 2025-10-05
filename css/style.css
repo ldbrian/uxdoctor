@@ -61,7 +61,10 @@ body {
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
     padding: 1rem 0;
-    text-align: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 .report-header h1 {
@@ -729,6 +732,11 @@ body {
     font-size: 1.2rem;
 }
 
+.pricing-card ul li.disabled::before {
+    content: "✗";
+    color: var(--gray);
+}
+
 .faq {
     padding: 5rem 0;
     background-color: white;
@@ -861,9 +869,15 @@ body {
     margin-bottom: 1.5rem;
 }
 
+.section-header h1,
 .section-header h2 {
     color: var(--primary);
-    font-size: 1.5rem;
+    margin: 0 0 0.5rem 0;
+}
+
+.section-header p {
+    color: var(--gray);
+    font-size: 1.1rem;
     margin: 0;
 }
 
@@ -873,6 +887,7 @@ body {
     padding: 2rem;
     background: var(--light);
     border-radius: var(--border-radius);
+    margin: 2rem 0;
 }
 
 .overall-score-value {
@@ -884,6 +899,12 @@ body {
 .overall-score-label {
     font-size: 1.2rem;
     color: var(--gray);
+    margin-top: 0.5rem;
+}
+
+.overall-score-description {
+    font-size: 1rem;
+    color: var(--dark);
     margin-top: 0.5rem;
 }
 
@@ -1279,8 +1300,14 @@ body {
     margin-bottom: 1rem;
 }
 
+.card-header h2,
 .card-header h3 {
     color: var(--primary);
+    margin: 0 0 0.5rem 0;
+}
+
+.card-header p {
+    color: var(--gray);
     margin: 0;
 }
 
@@ -1398,6 +1425,318 @@ body {
 .gap-5 { gap: 1.25rem; }
 .gap-6 { gap: 1.5rem; }
 
+/* 报告页面新样式 */
+.overview-section .overview-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.overview-section .overall-score-container {
+    flex: 1;
+    min-width: 250px;
+}
+
+.overview-section .detailed-scores-container {
+    flex: 2;
+    min-width: 300px;
+}
+
+.basic-analysis-section .subsection {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--light);
+    border-radius: var(--border-radius);
+}
+
+.basic-analysis-section .subsection h3 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.basic-analysis-section .critical-issues-list,
+.basic-analysis-section .issue-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.basic-analysis-section .critical-issues-list li,
+.basic-analysis-section .issue-list li {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.ai-upgrade-section .card-content ul {
+    list-style: none;
+    padding-left: 0;
+    text-align: left;
+    margin: 1.5rem 0;
+}
+
+.ai-upgrade-section .card-content ul li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+}
+
+.ai-upgrade-section .card-content ul li::before {
+    content: "✓";
+    color: var(--success);
+    margin-right: 0.8rem;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.social-proof-section .testimonials-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.social-proof-section .testimonial-card {
+    background: var(--light);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.social-proof-section .testimonial-content {
+    font-style: italic;
+    margin-bottom: 1rem;
+    color: var(--dark);
+}
+
+.social-proof-section .testimonial-author {
+    text-align: right;
+    color: var(--gray);
+}
+
+.pricing-section .section-header {
+    text-align: center;
+}
+
+/* 页脚样式 */
+.report-footer {
+    background: #2c3e50;
+    color: white;
+    padding: 2rem 0;
+    margin-top: 3rem;
+}
+
+.report-footer .footer-content {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.report-footer .footer-section {
+    flex: 1;
+    min-width: 200px;
+}
+
+.report-footer .footer-section h3 {
+    margin-bottom: 1rem;
+    color: #ecf0f1;
+}
+
+.report-footer .footer-links {
+    list-style: none;
+}
+
+.report-footer .footer-links li {
+    margin-bottom: 0.5rem;
+}
+
+.report-footer .footer-links a {
+    color: #bdc3c7;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.report-footer .footer-links a:hover {
+    color: white;
+}
+
+.report-footer .copyright {
+    text-align: center;
+    padding-top: 2rem;
+    margin-top: 2rem;
+    border-top: 1px solid #34495e;
+    color: #bdc3c7;
+    font-size: 0.9rem;
+    max-width: 1200px;
+    margin: 2rem auto 0;
+    padding: 2rem 1rem 0;
+}
+
+/* 评分环样式 */
+.score-ring {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary) 0% 70%, #eee 70% 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    position: relative;
+}
+
+.score-ring::before {
+    content: "";
+    position: absolute;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: white;
+}
+
+.score-value {
+    position: relative;
+    font-size: 1.5rem;
+    font-weight: bold;
+    z-index: 1;
+}
+
+/* 问题卡片样式 */
+.issue-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.issue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.issue-title {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.severity-badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.severity-high {
+    background-color: #f44336;
+    color: white;
+}
+
+.severity-medium {
+    background-color: #ff9800;
+    color: white;
+}
+
+.severity-low {
+    background-color: #4caf50;
+    color: white;
+}
+
+/* AI升级引导模块 */
+.ai-upgrade-module {
+    background: #e8f4f8;
+    border-left: 4px solid #3498db;
+    padding: 1rem;
+    margin-top: 1rem;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+
+.ai-upgrade-header {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    color: #3498db;
+}
+
+/* 价值点网格 */
+.value-points-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.value-point {
+    text-align: center;
+}
+
+.value-point-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: var(--primary);
+}
+
+.value-point-title {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    color: var(--dark);
+}
+
+/* 报告概览信息卡片 */
+.info-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.info-card {
+    background: var(--light);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
+.info-label {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    color: var(--gray);
+}
+
+/* 导航栏样式 */
+.main-nav ul {
+    display: flex;
+    list-style: none;
+    gap: 1.5rem;
+}
+
+.main-nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.3s;
+}
+
+.main-nav a:hover {
+    opacity: 0.8;
+}
+
+/* 主要操作按钮 */
+.main-actions {
+    display: flex;
+    gap: 1rem;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .container {
@@ -1450,5 +1789,28 @@ body {
     
     .how-it-works, .pricing, .faq {
         padding: 3rem 0;
+    }
+    
+    .overview-section .overview-content {
+        flex-direction: column;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .main-nav ul {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .main-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .info-cards {
+        grid-template-columns: 1fr;
     }
 }

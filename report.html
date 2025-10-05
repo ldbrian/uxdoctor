@@ -6,6 +6,198 @@
     <title>UX体验体检报告 - UXDoctor</title>
     <link rel="stylesheet" href="/css/style.css">
     <style>
+        /* 页头导航样式 */
+        .report-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        .main-nav ul {
+            display: flex;
+            list-style: none;
+            gap: 1.5rem;
+        }
+
+        .main-nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.3s;
+        }
+
+        .main-nav a:hover {
+            opacity: 0.8;
+        }
+
+        .main-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-primary, .btn-secondary {
+            background-color: white;
+            color: var(--primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            font-weight: bold;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .btn-primary:hover, .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.9);
+            transform: translateY(-2px);
+        }
+
+        /* 页脚导航样式 */
+        .report-footer {
+            background: #2c3e50;
+            color: white;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .footer-section {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .footer-section h3 {
+            margin-bottom: 1rem;
+            color: #ecf0f1;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-links a {
+            color: #bdc3c7;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .copyright {
+            text-align: center;
+            padding-top: 2rem;
+            margin-top: 2rem;
+            border-top: 1px solid #34495e;
+            color: #bdc3c7;
+            font-size: 0.9rem;
+            max-width: 1200px;
+            margin: 2rem auto 0;
+            padding: 2rem 1rem 0;
+        }
+
+        /* 报告内容区域 */
+        .report-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .report-content {
+            margin: 2rem 0;
+        }
+
+        /* 用户评价样式 */
+        .testimonials-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .testimonial-card {
+            background: var(--light);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        .testimonial-content {
+            font-style: italic;
+            margin-bottom: 1rem;
+            color: var(--dark);
+        }
+
+        .testimonial-author {
+            text-align: right;
+            color: var(--gray);
+        }
+
+        /* 卡片样式 */
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header h3 {
+            color: var(--primary);
+            margin: 0;
+        }
+
+        /* 升级操作区域 */
+        .upgrade-actions {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        /* 建议和问题样式 */
         .suggestion {
             background-color: #e8f4f8;
             border-left: 4px solid #3498db;
@@ -24,29 +216,302 @@
             font-size: 0.9em;
             margin: 5px 0;
         }
+        
+        /* 定价卡片 */
+        .pricing-cards {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .pricing-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 2rem;
+            text-align: center;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            flex: 1;
+            min-width: 300px;
+            max-width: 400px;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .pricing-card.featured {
+            border: 2px solid var(--primary);
+            transform: scale(1.05);
+            z-index: 2;
+        }
+
+        .pricing-card.featured:hover {
+            transform: scale(1.05) translateY(-10px);
+        }
+
+        .pricing-card.featured::before {
+            content: "推荐";
+            position: absolute;
+            top: -12px;
+            right: 20px;
+            background: linear-gradient(135deg, var(--warning), #ff6b9c);
+            color: white;
+            padding: 0.25rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .pricing-card h3 {
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            font-size: 1.8rem;
+        }
+
+        .price {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1.8rem;
+            color: var(--dark);
+        }
+
+        .price span {
+            font-size: 1.1rem;
+            color: var(--gray);
+        }
+
+        .pricing-card ul {
+            list-style: none;
+            margin-bottom: 2.2rem;
+            text-align: left;
+        }
+
+        .pricing-card ul li {
+            padding: 0.7rem 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+
+        .pricing-card ul li:last-child {
+            border-bottom: none;
+        }
+
+        .pricing-card ul li::before {
+            content: "✓";
+            color: var(--success);
+            margin-right: 0.8rem;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .pricing-card ul li.disabled::before {
+            content: "✗";
+            color: var(--gray);
+        }
+
+        /* 评分环样式 */
+        .score-ring {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: conic-gradient(var(--primary) 0% 70%, #eee 70% 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            position: relative;
+        }
+
+        .score-ring::before {
+            content: "";
+            position: absolute;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: white;
+        }
+
+        .score-value {
+            position: relative;
+            font-size: 1.5rem;
+            font-weight: bold;
+            z-index: 1;
+        }
+
+        /* 问题卡片样式 */
+        .issue-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .issue-title {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .severity-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .severity-high {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .severity-medium {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .severity-low {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        /* AI升级引导模块 */
+        .ai-upgrade-module {
+            background: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+
+        .ai-upgrade-header {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #3498db;
+        }
+
+        /* 价值点网格 */
+        .value-points-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .value-point {
+            text-align: center;
+        }
+
+        .value-point-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .value-point-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        /* 报告概览信息卡片 */
+        .info-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .info-card {
+            background: var(--light);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            text-align: center;
+        }
+
+        .info-label {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: var(--gray);
+        }
     </style>
 </head>
 <body>
-    <!-- 顶部标题区域 -->
+    <!-- 1. 页头导航区域 -->
     <header class="report-header">
-        <div class="container">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <button class="btn-primary" id="back-to-home">返回首页</button>
-                <h1 style="flex: 1; text-align: center;">UX体验体检报告</h1>
-                <div style="width: 60px;"></div> <!-- 占位元素，保持标题居中 -->
+        <div class="header-content">
+            <div class="logo">UXDoctor</div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="#">我的报告</a></li>
+                    <li><a href="#">定价</a></li>
+                    <li><a href="#">帮助</a></li>
+                </ul>
+            </nav>
+            <div class="main-actions">
+                <button class="btn-primary" id="upgrade-btn">升级专业版</button>
+                <button class="btn-secondary" id="back-to-home">🏠 返回首页</button>
             </div>
-            <div class="report-date" id="report-date" style="text-align: center; margin-top: 10px; font-size: 0.9rem; opacity: 0.9;"></div>
         </div>
     </header>
 
     <!-- 报告内容区域 -->
-    <section class="report-section">
-        <div class="container">
-            <div class="report-content">
-                <!-- 报告内容将通过JavaScript动态加载 -->
+    <div class="report-container">
+        <div class="report-content">
+            <!-- 报告内容将通过JavaScript动态加载 -->
+        </div>
+    </div>
+
+    <!-- 7. 页脚区域 -->
+    <footer class="report-footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>产品</h3>
+                <ul class="footer-links">
+                    <li><a href="#">功能介绍</a></li>
+                    <li><a href="#">定价方案</a></li>
+                    <li><a href="#">使用案例</a></li>
+                    <li><a href="#">更新日志</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>资源</h3>
+                <ul class="footer-links">
+                    <li><a href="#">帮助文档</a></li>
+                    <li><a href="#">API文档</a></li>
+                    <li><a href="#">博客</a></li>
+                    <li><a href="#">社区</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>公司</h3>
+                <ul class="footer-links">
+                    <li><a href="#">关于我们</a></li>
+                    <li><a href="#">联系我们</a></li>
+                    <li><a href="#">加入我们</a></li>
+                    <li><a href="#">合作伙伴</a></li>
+                </ul>
             </div>
         </div>
-    </section>
+        <div class="copyright">
+            <p>&copy; 2025 UXDoctor. All rights reserved.</p>
+        </div>
+    </footer>
 
     <script src="/js/report.js"></script>
 </body>

@@ -14,7 +14,13 @@ async function createUploadsDir() {
     try {
         await fs.access('uploads');
     } catch (error) {
-        await fs.mkdir('uploads');
+        // 如果目录不存在，则创建它
+        if (error.code === 'ENOENT') {
+            await fs.mkdir('uploads');
+        } else {
+            // 如果是其他错误，重新抛出
+            throw error;
+        }
     }
 }
 
